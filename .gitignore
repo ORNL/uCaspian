@@ -1,0 +1,7 @@
+*.vcd
+*.fst
+vout/
+vmod/
+build/
+*.d
+__pycache__/
