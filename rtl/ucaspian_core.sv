@@ -177,7 +177,7 @@ logic synapse_step_done;
 logic synapse_clear_done;
 
 genvar syn_i;
-for(syn_i = 0; syn_i < 4; syn_i = syn_i + 1) begin
+generate for(syn_i = 0; syn_i < 4; syn_i = syn_i + 1) begin : synapses
 
     always_comb syn_enable[syn_i] = !clear_act && !clear_config; // TODO
 
@@ -207,6 +207,7 @@ for(syn_i = 0; syn_i < 4; syn_i = syn_i + 1) begin
         .dend_rdy(syn_to_dend_rdy[syn_i])
     );
 end
+endgenerate
 
 always_comb begin
     synapse_step_done = syn_step_done[0] && syn_step_done[1] && syn_step_done[2] && syn_step_done[3];
@@ -369,6 +370,7 @@ always_ff @(posedge clk) begin
     else if(neuron_output_rdy && neuron_output_vld) begin
         output_fire_addr    <= neuron_output_addr;
         output_fire_waiting <= 1;
+        neuron_output_rdy   <= 0;
     end
 end
 
@@ -473,7 +475,8 @@ always_ff @(posedge clk) begin
     led_2 <= fd_step_done;
 end
 
-logic logic_clear_done = dendrite_clear_done && axon_clear_done && neuron_clear_done && synapse_clear_done;
+logic logic_clear_done;
+assign logic_clear_done = dendrite_clear_done && axon_clear_done && neuron_clear_done && synapse_clear_done;
 
 // Clear ack logic
 always_ff @(posedge clk) begin
