@@ -139,9 +139,11 @@ logic [7:0] cur_addr;
 logic [11:0] cur_config;
 logic signed [15:0] accum_charge;
 logic signed [15:0] in_charge;
+logic over_threshold;
 
 always_comb begin
     accum_charge = $signed(charge_rd_data) + $signed(in_charge);
+    over_threshold = $signed(accum_charge) > $signed({8'd0, cur_config[7:0]});
 end
 
 logic clear_act_done;
@@ -196,7 +198,8 @@ always_ff @(posedge clk) begin
                 charge_wr_addr <= cur_addr;
                 charge_wr_en   <= 1;
 
-                if($signed(accum_charge) > $signed({8'd0, cur_config[7:0]})) begin
+                //if($signed(accum_charge) > $signed({8'd0, cur_config[7:0]})) begin
+                if(over_threshold) begin
                     charge_wr_data <= 0;
                     neuron_state   <= NEURON_FIRE;
                 end

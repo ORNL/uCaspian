@@ -201,6 +201,7 @@ end
 // Accumulate from Synapse
 logic accumulate_done;
 logic signed [8:0] incoming_charge;
+logic incoming_rd_dly;
 always_ff @(posedge clk) begin
     if(!next_step && !clr_act_vec)
         dend_rdy <= 1;
@@ -209,10 +210,7 @@ always_ff @(posedge clk) begin
         activity_in <= 0;
     end
 
-    if(clear_act) begin
-        incoming_rd_en   <= 0;
-    end
-    else if(dend_rdy && dend_vld) begin
+    if(dend_rdy && dend_vld && ~clear_act) begin
         incoming_rd_addr <= dend_addr;
         incoming_charge  <= dend_charge;
         incoming_rd_en   <= 1;
@@ -221,6 +219,7 @@ always_ff @(posedge clk) begin
         incoming_rd_en   <= 0;
     end
 
+    incoming_rd_dly <= incoming_rd_en;
     incoming_wr_en   <= 0;
 
     if(clear_act) begin
@@ -228,7 +227,7 @@ always_ff @(posedge clk) begin
         incoming_wr_data <= 0;
         incoming_wr_en   <= 1;
     end
-    else if(incoming_rd_en) begin
+    else if(incoming_rd_dly) begin
         incoming_wr_addr <= incoming_rd_addr;
         incoming_wr_data <= $signed(incoming_rd_data) + $signed(incoming_charge);
         incoming_wr_en   <= 1;
