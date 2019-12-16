@@ -132,8 +132,9 @@ always_ff @(posedge clk) begin
             syn_rdy     <= 0;
 
             // wait for handshake signal
-            if(dend_rdy) begin
+            if(dend_rdy && dend_vld) begin
                 synapse_state <= SYN_IDLE;
+                dend_vld      <= 0;
             end
         end
         SYN_BLOCK_ON_DENDRITE: begin

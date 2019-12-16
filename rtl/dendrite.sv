@@ -241,7 +241,7 @@ logic flush_done;
 
 // TODO
 always_comb begin
-    step_done = flush_done && activity_none && (activity_none_hold == 2'b11);
+    step_done = flush_done && activity_none && (activity_none_hold == 2'b11) && (~incoming_rd_en && ~incoming_rd_dly && ~incoming_wr_en);
 end
 
 localparam [1:0]
