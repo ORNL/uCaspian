@@ -49,7 +49,7 @@ ICEPROG ?= iceprog
 
 # C++ (for Verilator)
 CXX ?= g++
-CFLAGS ?= -O2 -march=native -mtune=native
+CFLAGS ?= -O2 -march=native -mtune=native -fPIC -std=c++14 -fvisibility=hidden -flto
 
 # Verilator options
 VERILATOR_FLAGS = -Wno-fatal -O3 
@@ -67,7 +67,7 @@ all: $(BUILD)/$(TOP).bin
 flash: $(TOP).flash
 gui: $(TOP).gui
 test: $(VERILATOR_OUT)/Vucaspian
-lib: $(VERILATOR_MOD_OUT)/Vucaspian__all.a
+lib: $(VERILATOR_MOD_OUT)/Vucaspian__ALL.a
 
 $(BUILD):
 	mkdir -p $(BUILD)
@@ -108,7 +108,7 @@ $(BUILD)/%.bin: $(BUILD)/%.asc | $(BUILD)
 $(VERILATOR_OUT)/Vucaspian: $(RTL_SOURCES) $(SRC)/ucaspian.cpp
 	$(VERILATOR) \
 	    $(VERILATOR_FLAGS) \
-	    --Mdir $(VERILATOR_OUT)
+	    --Mdir $(VERILATOR_OUT) \
 	    -I$(RTL) -I$(INCLUDE) \
 	    -CFLAGS '-I../$(INCLUDE) $(TRACEON) $(CFLAGS)' \
 	    --cc $(RTL)/$(VERILATOR_TOP).sv \
@@ -118,7 +118,7 @@ $(VERILATOR_OUT)/Vucaspian: $(RTL_SOURCES) $(SRC)/ucaspian.cpp
 # Make just an archive -- will clean this up later
 $(VERILATOR_MOD_OUT)/Vucaspian__all.a: $(RTL_SOURCES)
 	$(VERILATOR) \
-	    $(VERILATOR_FLAGS) --trace-fst\
+	    $(VERILATOR_FLAGS) \
 	    --Mdir $(VERILATOR_MOD_OUT) \
 	    -I$(RTL) -I$(INCLUDE) \
 	    -CFLAGS '-I../$(INCLUDE) -DTRACEON $(CFLAGS)' \
