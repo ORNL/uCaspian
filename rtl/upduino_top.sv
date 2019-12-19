@@ -43,7 +43,7 @@ module top(
     #(
         // Default is 48MHz. Divide by 4 to get the desired 24MHz.
         // 2'b00 = 48 MHz, 2'b01 = 24 MHz, 2'b10 = 12 MHz, 2'b11 = 6 MHz
-        .CLKHF_DIV("0b10")
+        .CLKHF_DIV("0b01")
     )
     u_hfosc (
         .CLKHFPU(1'b1),
@@ -61,10 +61,10 @@ module top(
 
     axis_ft245 
     #(
-        .WR_SETUP_CYCLES(2),
-        .WR_PULSE_CYCLES(2),
-        .RD_PULSE_CYCLES(2),
-        .RD_WAIT_CYCLES(2)
+        .WR_SETUP_CYCLES(3),
+        .WR_PULSE_CYCLES(3),
+        .RD_PULSE_CYCLES(3),
+        .RD_WAIT_CYCLES(3)
     )
     ft245_inst
     (
@@ -119,7 +119,7 @@ module top(
     
     axis_fifo 
     #(
-        .DEPTH(512),
+        .DEPTH(1024),
         .LAST_ENABLE(0),
         .USER_ENABLE(0)
     ) 
@@ -141,7 +141,7 @@ module top(
 
     axis_fifo 
     #(
-        .DEPTH(512),
+        .DEPTH(1024), // was 512
         .LAST_ENABLE(0),
         .USER_ENABLE(0)
     ) 

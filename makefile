@@ -21,7 +21,7 @@ DEVICE-upduino ?= up5k
 FOOTPRINT-upduino ?= sg48
 PIN_SRC-upduino ?= upduino_v2.pcf
 TOP-upduino ?= $(basename upduino_top.sv)
-FREQ-upduino ?= 12
+FREQ-upduino ?= 24
 
 # Select the board
 USB_DEV ?= 1-1:1.0
