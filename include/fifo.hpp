@@ -11,7 +11,7 @@ class FakeFifo
     public:
         /* true = input to verilog, false = output from verilog */
         FakeFifo(uint8_t *clk_, uint8_t *rdy_, uint8_t *vld_, T *data_, bool dir_, bool rio_) : 
-            m_dir(dir_), clk(clk_), rdy(rdy_), vld(vld_), data_port(data_), random_io(rio_) 
+            m_dir(dir_), random_io(rio_), clk(clk_), rdy(rdy_), vld(vld_), data_port(data_) 
         {
             fifo_empty = true;
             fifo_full  = false;
@@ -20,11 +20,11 @@ class FakeFifo
             if(m_dir)
             {
                 *data_port = 0;
-                *vld = !fifo_empty;
+                *vld = false;
             }
             else
             {
-                *rdy = !fifo_full;
+                *rdy = false;
             }
         }
 
@@ -33,8 +33,14 @@ class FakeFifo
             m_data.push_back(data);
         }
 
+        void push_vec(std::vector<T> data)
+        {
+            for(auto &d : data) push(d);
+        }
+
         T pop()
         {
+            if(empty()) throw std::runtime_error("Cannot pop when empty");
             T ret = m_data.front();
             m_data.pop_front();
             return ret;
@@ -76,32 +82,83 @@ class FakeFifo
         {
             return m_data.empty();
         }
-        
-        void eval()
+
+        size_t size() const
         {
-            /* data is moved when rdy and vld are asserted */
-            if(*rdy && *vld)
+            return m_data.size();
+        }
+        
+        void eval(uint8_t clk, uint8_t rst)
+        {
+            if(rst)
             {
                 if(m_dir)
                 {
-                    if(!fifo_empty) *data_port = pop();
-
-                    if(fifo_empty) last_flag = true;
-                    else           last_flag = false;
+                    *data_port = 0;
+                    *vld = false;
                 }
                 else
                 {
-                    push(*data_port);
+                    *rdy = false;
                 }
             }
-
-            /* when fifo is empty & outputs to verilog, valid should be de-asserted */
-            if(empty()) fifo_empty = true;
-            else        fifo_empty = false;
-
-            if(!m_dir) *rdy = !fifo_full;
-            else       *vld = !last_flag || !fifo_empty;
+            else
+            {
+                if(clk && *rdy && *vld)
+                {
+                    if(m_dir)
+                    {
+                        *data_port = pop();
+                    }
+                    else
+                    {
+                        push(*data_port); 
+                    }
+                }
+                else
+                {
+                    if(m_dir)
+                    {
+                        *vld = !empty();
+                    }
+                    else
+                    {
+                        *rdy = true;
+                    }
+                }
+            }
         }
+
+#ifdef NOT_DEFD
+        void eval(uint8_t clk, uint8_t rst)
+        {
+            if(!rst && clk)
+            {
+                /* data is moved when rdy and vld are asserted */
+                if(*rdy && *vld)
+                {
+                    if(m_dir)
+                    {
+                        if(!fifo_empty) *data_port = pop();
+
+                        if(fifo_empty) last_flag = true;
+                        else           last_flag = false;
+                    }
+                    else
+                    {
+                        push(*data_port);
+                    }
+                }
+
+                /* when fifo is empty & outputs to verilog, valid should be de-asserted */
+                if(empty()) fifo_empty = true;
+                else        fifo_empty = false;
+
+                if(!m_dir) *rdy = !fifo_full;
+                else       *vld = !last_flag || !fifo_empty;
+            }
+        }
+#endif
 
     private:
         /* our data queue */
