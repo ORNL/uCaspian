@@ -23,9 +23,16 @@ PIN_SRC-upduino ?= upduino_v2.pcf
 TOP-upduino ?= $(basename upduino_top.sv)
 FREQ-upduino ?= 24
 
+FAMILY-devr0 ?= ice40
+DEVICE-devr0 ?= up5k
+FOOTPRINT-devr0 ?= sg48
+PIN_SRC-devr0 ?= dev_r0.pcf
+TOP-devr0 ?= $(basename dev_r0_top.sv)
+FREQ-devr0 ?= 25
+
 # Select the board
 USB_DEV ?= 1-1:1.0
-BOARD ?= upduino
+BOARD ?= devr0
 
 # Select parameters based on the board
 DEVICE := $(DEVICE-$(BOARD))
@@ -65,6 +72,7 @@ endif
 
 all: $(BUILD)/$(TOP).bin
 flash: $(TOP).flash
+prog: $(TOP).prog
 gui: $(TOP).gui
 test: $(VERILATOR_OUT)/Vucaspian
 lib: $(VERILATOR_MOD_OUT)/Vucaspian__ALL.a
@@ -99,6 +107,9 @@ $(BUILD)/%.bin: $(BUILD)/%.asc | $(BUILD)
 	$(ICEPROG) -e 128 # Force a reset
 	$(ICEPROG) $<
 	# echo $(USB_DEV) | tee /sys/bus/usb/drivers/ftdi_sio/bind
+
+%.prog: $(BUILD)/%.bin
+	$(ICEPROG) -I B -S $<
 
 # Open the Place & Route GUI to inspect the design
 %.gui: $(BUILD)/%.json

@@ -1,0 +1,31 @@
+# External 25 MHz clock
+set_io -nowarn clk 20
+
+# FTDI2232 Channel A
+set_io -nowarn d0     25
+set_io -nowarn d1     23
+set_io -nowarn d2     27
+set_io -nowarn d3     26
+set_io -nowarn d4     28
+set_io -nowarn d5     31
+set_io -nowarn d6     32
+set_io -nowarn d7     34
+set_io -nowarn oe     37
+set_io -nowarn txe    36
+set_io -nowarn rxf    43
+set_io -nowarn rd     38
+set_io -nowarn wr     42
+set_io -nowarn siwua  10
+
+# SPI chip select
+set_io -nowarn spi_cs 16
+
+# LEDS
+set_io -nowarn led1 11
+set_io -nowarn led2 12 
+set_io -nowarn led3 13 
+set_io -nowarn led4 19 
+
+# Power interface
+set_io -nowarn pwr_sda 6
+set_io -nowarn pwr_scl 9
