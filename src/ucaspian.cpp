@@ -81,11 +81,8 @@ int main(int argc, char **argv, char **env)
             top.eval();
 
             // update fifos on rising edge
-            if(!top.reset && top.sys_clk)
-            {
-                fifo_in.eval();
-                fifo_out.eval();
-            }
+            fifo_in.eval(top.sys_clk, top.reset);
+            fifo_out.eval(top.sys_clk, top.reset);
         }
 
         if(steps > max_steps) break;

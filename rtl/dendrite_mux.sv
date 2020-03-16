@@ -95,25 +95,26 @@ always_comb begin
     case(syn_select)
         0: begin
             dend_addr   = syn_dend_addr_0;
-            dend_charge = $signed(syn_dend_charge_0);
+            // sign extend to 9 bits
+            dend_charge = $signed({syn_dend_charge_0[7], syn_dend_charge_0});
             dend_vld    = syn_vld[0];
             syn_rdy[0]  = dend_rdy;
         end
         1: begin
             dend_addr   = syn_dend_addr_1;
-            dend_charge = $signed(syn_dend_charge_1);
+            dend_charge = $signed({syn_dend_charge_1[7], syn_dend_charge_1});
             dend_vld    = syn_vld[1];
             syn_rdy[1]  = dend_rdy;
         end
         2: begin
             dend_addr   = syn_dend_addr_2;
-            dend_charge = $signed(syn_dend_charge_2);
+            dend_charge = $signed({syn_dend_charge_2[7], syn_dend_charge_2});
             dend_vld    = syn_vld[2];
             syn_rdy[2]  = dend_rdy;
         end
         3: begin
             dend_addr   = syn_dend_addr_3;
-            dend_charge = $signed(syn_dend_charge_3);
+            dend_charge = $signed({syn_dend_charge_3[7], syn_dend_charge_3});
             dend_vld    = syn_vld[3];
             syn_rdy[3]  = dend_rdy;
         end

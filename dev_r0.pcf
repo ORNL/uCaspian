@@ -20,7 +20,7 @@ set_io -nowarn siwua  10
 # SPI chip select
 set_io -nowarn spi_cs 16
 
-# LEDS
+# LEDs
 set_io -nowarn led1 11
 set_io -nowarn led2 12 
 set_io -nowarn led3 13 
@@ -29,3 +29,13 @@ set_io -nowarn led4 19
 # Power interface
 set_io -nowarn pwr_sda 6
 set_io -nowarn pwr_scl 9
+
+# GPIO -- labeled based on IOB number
+set_io -nowarn p0 46
+set_io -nowarn p2 47
+set_io -nowarn p3 44
+set_io -nowarn p4 48
+set_io -nowarn p5 45
+set_io -nowarn p6 2
+set_io -nowarn p8 4
+set_io -nowarn p9 3

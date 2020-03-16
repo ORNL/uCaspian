@@ -51,48 +51,34 @@ module ucaspian_neuron(
 //     [11]  Output Enable
 //   [10:8]  Charge Leak
 //    [0:7]  Threshold
-logic [11:0] config_ram [255:0];
+logic  [7:0] config_rd_addr;
+logic [15:0] config_rd_data;
+logic        config_rd_en;
+logic  [7:0] config_wr_addr;
+logic [15:0] config_wr_data;
+logic        config_wr_en;
 
-// Load Configuration
-logic [7:0] cfg_clear_addr;
-logic [7:0] cfg_thresh;
-logic cfg_clear_start;
-logic cfg_clear_done;
-always_ff @(posedge clk) begin
-    if(clear_config) begin
-        if(!cfg_clear_start) begin
-            cfg_clear_start <= 1;
-            cfg_clear_addr  <= 0;
-        end
-        else if(!cfg_clear_done) begin
-            cfg_clear_addr <= cfg_clear_addr + 1;
-            config_ram[cfg_clear_addr] <= 0;
+dp_ram_16x256 config_ram_inst(
+    .clk(clk),
+    .reset(reset),
 
-            if(cfg_clear_addr == 255) begin
-                cfg_clear_done  <= 1;
-            end
-        end
-    end
-    else begin 
-        cfg_clear_start <= 0;
-        cfg_clear_done  <= 0;
+    .rd_addr(config_rd_addr),
+    .rd_data(config_rd_data),
+    .rd_en(config_rd_en),
 
-        if(config_enable) begin
-            case(config_byte)
-                1: cfg_thresh <= config_value[7:0];
-                2: config_ram[config_addr] <= {config_value[3:0], cfg_thresh};
-            endcase
-        end
-    end
-end
+    .wr_addr(config_wr_addr),
+    .wr_data(config_wr_data),
+    .wr_en(config_wr_en)
+);
 
-// Store charge
+// Charge RAM -- stores current neuron charge
 logic  [7:0] charge_rd_addr;
 logic [15:0] charge_rd_data;
 logic        charge_rd_en;
 logic  [7:0] charge_wr_addr;
 logic [15:0] charge_wr_data;
 logic        charge_wr_en;
+
 dp_ram_16x256 charge_ram_inst(
     .clk(clk),
     .reset(reset),
@@ -106,177 +92,227 @@ dp_ram_16x256 charge_ram_inst(
     .wr_en(charge_wr_en)
 );
 
-// TODO: Store time of last fire for leak calculation
-/*
-dp_ram_16x256 last_fire_ram_inst(
+// Fire Time RAM -- store last fire time for leak calculation
+logic  [7:0] ftime_rd_addr;
+logic [15:0] ftime_rd_data;
+logic        ftime_rd_en;
+logic  [7:0] ftime_wr_addr;
+logic [15:0] ftime_wr_data;
+logic        ftime_wr_en;
+
+dp_ram_16x256 ftime_ram_inst(
     .clk(clk),
     .reset(reset),
 
-    .rd_addr(),
-    .rd_data(),
-    .rd_en(),
+    .rd_addr(ftime_rd_addr),
+    .rd_data(ftime_rd_data),
+    .rd_en(ftime_rd_en),
 
-    .wr_addr(),
-    .wr_data(),
-    .wr_en()
+    .wr_addr(ftime_wr_addr),
+    .wr_data(ftime_wr_data),
+    .wr_en(ftime_wr_en)
 );
-*/
 
-// TODO: Optimize this somewhat -- it is blatently bad now
-// It should be properly pipelined to maximize throughput
+// bond all ram read port control together
+logic [7:0] ram_rd_addr;
+logic ram_rd_en;
 
-localparam [2:0]
-    NEURON_IDLE   = 0,
-    NEURON_READ   = 1,
-    NEURON_WRITE  = 2,
-    NEURON_FIRE   = 3,
-    NEURON_OUTPUT = 4,
-    NEURON_CLEAR  = 5;
+assign ftime_rd_addr  = ram_rd_addr;
+assign charge_rd_addr = ram_rd_addr;
+assign config_rd_addr = ram_rd_addr;
 
-logic [2:0] neuron_state;
+assign ftime_rd_en  = ram_rd_en;
+assign charge_rd_en = ram_rd_en;
+assign config_rd_en = ram_rd_en;
 
-logic [7:0] cur_addr;
-logic [11:0] cur_config;
-logic signed [15:0] accum_charge;
+logic block;
+
+assign neuron_rdy = ~block;
+
+// Stage 1: Register incoming charge, read from rams
 logic signed [15:0] in_charge;
-logic over_threshold;
-
-always_comb begin
-    accum_charge = $signed(charge_rd_data) + $signed(in_charge);
-    over_threshold = $signed(accum_charge) > $signed({8'd0, cur_config[7:0]});
-end
-
-logic clear_act_done;
-
+logic [7:0] in_addr;
 always_ff @(posedge clk) begin
-    charge_rd_en <= 0;
-    charge_wr_en <= 0;
-    neuron_state <= neuron_state;
-    step_done    <= 0;
-    neuron_rdy   <= 0;
-    clear_act_done <= 0;
-
     if(reset) begin
-        neuron_rdy   <= 0;
-        output_vld   <= 0;
-        neuron_state <= NEURON_IDLE;
+        in_charge   <= 0;
+        in_addr     <= 0;
+        ram_rd_addr <= 0;
+        ram_rd_en   <= 0;
+    end
+    else if(neuron_vld && neuron_rdy) begin
+        in_charge   <= neuron_charge;
+        in_addr     <= neuron_addr;
+        ram_rd_addr <= neuron_addr;
+        ram_rd_en   <= 1;
     end
     else begin
-        case(neuron_state)
-            NEURON_IDLE: begin
-                neuron_rdy <= 1;
-                step_done  <= 1; // TODO
-
-                if(clear_act || clear_config) begin
-                    cur_addr     <= 0;
-                    neuron_rdy   <= 0;
-                    step_done    <= 0;
-                    neuron_state <= NEURON_CLEAR;
-                end
-                else if(neuron_rdy && neuron_vld) begin
-                    cur_addr     <= neuron_addr;
-                    in_charge    <= neuron_charge;
-                    step_done    <= 0; // TODO
-
-                    // if there is something to do 
-                    if(neuron_charge != 0) begin
-                        neuron_rdy     <= 0; 
-                        charge_rd_addr <= neuron_addr;
-                        charge_rd_en   <= 1;
-                        neuron_state   <= NEURON_READ;
-                    end
-                end
-            end
-            NEURON_READ: begin
-                step_done      <= 0;
-                charge_rd_en   <= 1;
-                cur_config     <= config_ram[cur_addr];
-                neuron_state   <= NEURON_WRITE;
-            end
-            NEURON_WRITE: begin
-                step_done      <= 0;
-                charge_wr_addr <= cur_addr;
-                charge_wr_en   <= 1;
-
-                //if($signed(accum_charge) > $signed({8'd0, cur_config[7:0]})) begin
-                if(over_threshold) begin
-                    charge_wr_data <= 0;
-                    neuron_state   <= NEURON_FIRE;
-                end
-                else begin
-                    charge_wr_data <= accum_charge;
-                    neuron_state   <= NEURON_IDLE;
-                end
-            end
-            NEURON_FIRE: begin
-                axon_addr <= cur_addr;
-                axon_vld  <= 1;
-                step_done <= 0;
-
-                if(axon_vld && axon_rdy) begin
-                    axon_vld <= 0;
-
-                    if(cur_config[11])
-                        neuron_state <= NEURON_OUTPUT;
-                    else 
-                        neuron_state <= NEURON_IDLE;
-                end
-            end
-            NEURON_OUTPUT: begin
-                output_addr <= cur_addr;
-                output_vld  <= 1;
-                step_done   <= 0;
-
-                if(output_vld && output_rdy) begin
-                    output_vld   <= 0;
-                    neuron_state <= NEURON_IDLE;
-                end
-            end
-            NEURON_CLEAR: begin
-                if(!clear_act && !clear_config) begin
-                    neuron_state <= NEURON_IDLE;
-                end
-                else if(!clear_act_done) begin
-                    charge_wr_addr <= cur_addr;
-                    charge_wr_data <= 0;
-                    charge_wr_en   <= 1;
-                    cur_addr       <= cur_addr + 1;
-
-                    if(cur_addr == 255) begin
-                        clear_act_done <= 1;
-                    end
-                end
-                else begin
-                    clear_act_done <= 1;
-                end
-            end
-            default: begin
-                neuron_state <= NEURON_IDLE;
-                step_done    <= 0;
-            end
-        endcase
-
-        if((clear_act || clear_config) && neuron_state != NEURON_CLEAR) begin
-            axon_vld     <= 0;
-            neuron_rdy   <= 0;
-            output_vld   <= 0;
-            cur_addr     <= 0;
-            neuron_state <= NEURON_CLEAR;
-        end
+        ram_rd_en   <= 0;
     end
 end
 
+logic stage_2_en;
 always_ff @(posedge clk) begin
-    if(clear_act)
-        clear_done <= clear_act_done;
-    else if(clear_config)
-        clear_done <= clear_act_done && cfg_clear_done;
-    else
-        clear_done <= 0;
+    if(ram_rd_en) stage_2_en <= 1;
+    else if(block) stage_2_en <= stage_2_en;
+    else stage_2_en <= 0;
 end
 
-// TODO: Periodically check if neuron has leaked to zero
+// Stage 2: Accumulate charge, leak?
+logic signed [15:0] accum_charge;
+logic [7:0] accum_addr;
+logic [7:0] accum_thresh;
+logic accum_oe;
+logic accum_en;
+
+always_ff @(posedge clk) begin
+    if(reset) begin
+        accum_addr   <= 0;
+        accum_charge <= 0;
+        accum_thresh <= 0;
+        accum_oe     <= 0;
+        accum_en     <= 0;
+    end
+    else if(~block & stage_2_en) begin
+        accum_addr   <= in_addr;
+        accum_charge <= $signed(in_charge) + $signed(charge_rd_data);
+        accum_thresh <= config_rd_data[7:0];
+        accum_oe     <= config_rd_data[11];
+        accum_en     <= 1;
+    end
+    else if(~block) begin
+        accum_en     <= 0;
+    end
+end
+
+// Stage 3: Determine if firing, write back charge, write back fire time
+//   Also handles writing configuration data and clearing activity
+logic does_fire;
+logic output_en;
+logic [7:0] fire_addr;
+logic [7:0] config_thresh;
+logic [7:0] clear_addr;
+
+always_ff @(posedge clk) begin
+    // pull to zero whenever not clearing stuff
+    if(~clear_act && ~clear_config) begin
+        clear_addr <= 0;
+        clear_done <= 0;
+    end
+
+    charge_wr_en <= 0;
+    
+    if(reset) begin
+        charge_wr_addr <= 0;
+        charge_wr_data <= 0;
+        charge_wr_en   <= 0;
+
+        does_fire <= 0;
+        output_en <= 0;
+        fire_addr <= 0;
+
+        config_thresh <= 0;
+        clear_addr    <= 0;
+    end
+    else if(config_enable) begin
+        config_wr_addr <= config_addr;
+        config_wr_en   <= 0;
+
+        case(config_byte)
+            1: config_thresh   <= config_value[7:0];
+            2: begin
+                config_wr_data <= {4'b0000, config_value[3:0], config_thresh};
+                config_wr_en   <= 1;
+            end
+        endcase
+    end
+    else if(clear_act || clear_config) begin
+        // clear stuff
+        if(clear_addr == 255) clear_done <= 1;
+        if(~clear_done) clear_addr <= clear_addr + 1;
+
+        if(clear_config) begin
+            config_wr_addr <= clear_addr;
+            config_wr_data <= 0;
+            config_wr_en   <= 0;
+        end
+
+        // clear activity for both cases
+        charge_wr_addr <= clear_addr;
+        charge_wr_data <= 0;
+        charge_wr_en   <= 1;
+        //ftime_wr_addr  <= clear_addr;
+        //ftime_wr_data  <= 0;
+        //ftime_wr_en    <= 1;
+    end
+    else if(~block && accum_en) begin
+        charge_wr_addr <= accum_addr;
+        charge_wr_en   <= 1;
+
+        // FIRE!
+        if(accum_charge > $signed({8'd0, accum_thresh})) begin
+            // TODO: fire time stuff
+            charge_wr_data <= 0;
+
+            does_fire <= 1;
+            output_en <= accum_oe;
+            fire_addr <= accum_addr;
+        end
+        else begin
+            charge_wr_data <= accum_charge;
+
+            does_fire <= 0;
+            output_en <= 0;
+            fire_addr <= 0;
+        end
+    end
+    else if(~block) begin
+        if((output_en && output_rdy && axon_rdy) || (~output_en && axon_rdy))
+            does_fire <= 0;
+    end
+end
+
+
+// Stage 4: Output fire if necessary
+always_ff @(posedge clk) begin
+    axon_vld   <= 0;
+    output_vld <= 0;
+
+    if(reset) begin
+        block      <= 0;
+    end
+    else if(clear_config || clear_act) begin
+        block      <= 1;
+    end
+    else if(does_fire) begin
+        if(axon_vld) begin
+            axon_vld    <= 0;
+            output_vld  <= 0;
+        end
+        else if(output_en && output_rdy && axon_rdy) begin
+            output_addr <= fire_addr;
+            output_vld  <= 1;
+            axon_addr   <= fire_addr;
+            axon_vld    <= 1;
+            block       <= 0;
+        end
+        else if(~output_en && axon_rdy) begin
+            axon_addr <= fire_addr;
+            axon_vld  <= 1;
+            block     <= 0;
+        end
+        else begin
+            block <= 1;
+        end
+    end
+    else begin
+        block      <= 0;
+    end
+end
+
+// indicate when we are working
+always_ff @(posedge clk) begin
+    step_done <= ~block && ~neuron_vld && ~charge_wr_en && ~ram_rd_en && ~stage_2_en && ~accum_en;
+end
 
 endmodule
-
 `endif

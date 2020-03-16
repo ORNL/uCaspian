@@ -25,13 +25,11 @@ module dp_ram_16x256(
 
 logic [15:0] ram [255:0];
 
-always_ff @(posedge clk)
-    if(rd_en)
-        rd_data <= ram[rd_addr];
-
-always_ff @(posedge clk)
-    if(wr_en)
-        ram[wr_addr] <= wr_data;
+always_ff @(posedge clk) begin
+    // Read before write
+    if(~reset & rd_en) rd_data <= ram[rd_addr];
+    if(~reset & wr_en) ram[wr_addr] <= wr_data;
+end
 
 endmodule
 

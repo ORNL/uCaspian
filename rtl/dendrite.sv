@@ -335,6 +335,7 @@ always_ff @(posedge clk) begin
                 if(flush_ack && flush_stop) begin
                     outgoing_wr_addr <= flush_idx;
                     outgoing_wr_en   <= 1;
+                    flush_new        <= 0;
                     flush_stop       <= 0;
                     flush_state      <= SCAN_ACTIVITY;
                     activity_mask[activity_fb] <= 1;
@@ -360,6 +361,7 @@ always_ff @(posedge clk) begin
                 end
             end
             DONE_ACTIVITY: begin
+                flush_new   <= 0;
                 flush_done  <= 1;
                 if(next_step) begin
                     activity_mask <= 0;
@@ -372,18 +374,15 @@ end
 
 always_ff @(posedge clk) begin
     neuron_vld <= 0;
+    flush_ack  <= 0;
 
-    if(reset || clear_act || clear_config) begin
-        flush_ack <= 0;
+    if(flush_new && !flush_ack) begin
+        neuron_vld <= 1;
     end
-    else begin
-        if(flush_ack) begin
-            flush_ack <= 0;
-        end
-        else if(flush_new && neuron_rdy && !flush_ack) begin
-            flush_ack  <= 1;
-            neuron_vld <= 1;
-        end
+    
+    if(neuron_vld && neuron_rdy) begin
+        neuron_vld <= 0;
+        flush_ack  <= 1;
     end
 end
 
