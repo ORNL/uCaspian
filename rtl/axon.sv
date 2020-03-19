@@ -8,7 +8,7 @@
 `ifndef uCaspian_Axon_SV
 `define uCaspian_Axon_SV
 
-`include "find_set_bit_16.sv"
+`include "find_set_bit.sv"
 
 module ucaspian_axon(
     input               clk,

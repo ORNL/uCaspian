@@ -11,7 +11,7 @@
 `define uCaspian_Dendrite_SV
 
 `include "dp_ram.sv"
-`include "find_set_bit_16.sv"
+`include "find_set_bit.sv"
 
 module ucaspian_dendrite(
     input               clk,

@@ -54,7 +54,7 @@ always_comb begin
     syn_addr_2 = cur_idx[9:0];
     syn_addr_3 = cur_idx[9:0];
 
-    case(cur_idx[11:10])
+    unique case(cur_idx[11:10])
         0: begin
             cur_syn_rdy = syn_rdy_0;
             syn_vld_0   = cur_syn_vld;

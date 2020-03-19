@@ -1,5 +1,5 @@
 /* uCaspian Neuron
- * Parker Mitchell, 2019
+ * Parker Mitchell, 2020
  *
  * The Neuron module is responsible for maintaining charge values
  * between time steps, accumulating charge from dendrites, 
@@ -140,6 +140,8 @@ always_ff @(posedge clk) begin
         ram_rd_en   <= 0;
     end
     else if(neuron_vld && neuron_rdy) begin
+        // Register data with handshake
+        // The first step is to read config/charge
         in_charge   <= neuron_charge;
         in_addr     <= neuron_addr;
         ram_rd_addr <= neuron_addr;
@@ -150,6 +152,8 @@ always_ff @(posedge clk) begin
     end
 end
 
+// This will synchronize the 1st stage with the 2nd stage
+// even if there is a stall in the pipeline
 logic stage_2_en;
 always_ff @(posedge clk) begin
     if(ram_rd_en) stage_2_en <= 1;
@@ -157,7 +161,7 @@ always_ff @(posedge clk) begin
     else stage_2_en <= 0;
 end
 
-// Stage 2: Accumulate charge, leak?
+// Stage 2: Accumulate charge // TODO: Leak
 logic signed [15:0] accum_charge;
 logic [7:0] accum_addr;
 logic [7:0] accum_thresh;
@@ -200,12 +204,10 @@ always_ff @(posedge clk) begin
     end
 
     charge_wr_en <= 0;
+    config_wr_en <= 0;
+    ftime_wr_en  <= 0;
     
     if(reset) begin
-        charge_wr_addr <= 0;
-        charge_wr_data <= 0;
-        charge_wr_en   <= 0;
-
         does_fire <= 0;
         output_en <= 0;
         fire_addr <= 0;
@@ -226,10 +228,11 @@ always_ff @(posedge clk) begin
         endcase
     end
     else if(clear_act || clear_config) begin
-        // clear stuff
+        // clear address counter (0->255, then signal done)
         if(clear_addr == 255) clear_done <= 1;
         if(~clear_done) clear_addr <= clear_addr + 1;
 
+        // if clearing config, do that at the same time as clear activity
         if(clear_config) begin
             config_wr_addr <= clear_addr;
             config_wr_data <= 0;
@@ -239,33 +242,37 @@ always_ff @(posedge clk) begin
         // clear activity for both cases
         charge_wr_addr <= clear_addr;
         charge_wr_data <= 0;
-        charge_wr_en   <= 1;
-        //ftime_wr_addr  <= clear_addr;
-        //ftime_wr_data  <= 0;
-        //ftime_wr_en    <= 1;
+        charge_wr_en   <= ~clear_done;
+
+        // TODO: track fire timing for leak
+        // ftime_wr_addr  <= clear_addr;
+        // ftime_wr_data  <= 0;
+        // ftime_wr_en    <= 1;
     end
     else if(~block && accum_en) begin
         charge_wr_addr <= accum_addr;
         charge_wr_en   <= 1;
 
+        // TODO: fire time stuff
+        // ftime_wr_addr <= accum_addr;
+        // ftime_wr_data <= time + 1;
+        // ftime_wr_en   <= 1;
+
         // FIRE!
         if(accum_charge > $signed({8'd0, accum_thresh})) begin
-            // TODO: fire time stuff
             charge_wr_data <= 0;
-
-            does_fire <= 1;
-            output_en <= accum_oe;
-            fire_addr <= accum_addr;
+            does_fire      <= 1;
+            output_en      <= accum_oe;
+            fire_addr      <= accum_addr;
         end
         else begin
+            // If we don't fire, then write back the residual charge
             charge_wr_data <= accum_charge;
-
-            does_fire <= 0;
-            output_en <= 0;
-            fire_addr <= 0;
+            does_fire      <= 0;
         end
     end
     else if(~block) begin
+        // reset 'does_fire' after data is passed on 
         if((output_en && output_rdy && axon_rdy) || (~output_en && axon_rdy))
             does_fire <= 0;
     end
@@ -278,16 +285,18 @@ always_ff @(posedge clk) begin
     output_vld <= 0;
 
     if(reset) begin
-        block      <= 0;
+        block <= 0;
     end
     else if(clear_config || clear_act) begin
-        block      <= 1;
+        block <= 1;
     end
     else if(does_fire) begin
+        // we sent the fire, drop vld back low
         if(axon_vld) begin
             axon_vld    <= 0;
             output_vld  <= 0;
         end
+        // we can send the fire, so lets do it
         else if(output_en && output_rdy && axon_rdy) begin
             output_addr <= fire_addr;
             output_vld  <= 1;
@@ -295,17 +304,19 @@ always_ff @(posedge clk) begin
             axon_vld    <= 1;
             block       <= 0;
         end
+        // not an output neuron, so it just needs to go to the axon
         else if(~output_en && axon_rdy) begin
             axon_addr <= fire_addr;
             axon_vld  <= 1;
             block     <= 0;
         end
+        // unable to send the fire, block the pipeline
         else begin
             block <= 1;
         end
     end
     else begin
-        block      <= 0;
+        block <= 0;
     end
 end
 
