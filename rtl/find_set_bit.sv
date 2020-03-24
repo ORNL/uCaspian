@@ -12,6 +12,7 @@
  * 
  * Finds index of the first '1' in a 8 bit value.
  */
+/*
 module find_set_bit_8(
     input        [7:0] in,
     output logic [2:0]  out,
@@ -35,6 +36,7 @@ always_comb begin
 end
 
 endmodule
+*/
 
 /* find first set bit (16 -> 4 priority encoder)
  * 
@@ -78,6 +80,7 @@ endmodule
  * Finds index of the first '1' in a 32 bit value.
  * This was previously parameterized, but yosys didn't like it.
  */
+/*
 module find_set_bit_32(
     input        [31:0] in,
     output logic [4:0]  out,
@@ -125,4 +128,5 @@ always_comb begin
 end
 
 endmodule
+*/
 `endif
