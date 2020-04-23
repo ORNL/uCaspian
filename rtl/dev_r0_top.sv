@@ -38,9 +38,20 @@ module top(
     output led4
 );
     // system reset
+    logic [2:0] reset_cnt;
     logic reset;
     initial reset = 1;
-    always_ff @(posedge clk) reset <= 0;
+    initial reset_cnt = 3'b111;
+
+    always_ff @(posedge clk) begin
+        if(reset_cnt > 0) begin
+            reset_cnt <= reset_cnt - 1;
+            reset     <= 1;
+        end
+        else begin
+            reset     <= 0;
+        end
+    end
 
     //// FTDI Async FIFO ////
     logic [7:0] data_i;
@@ -51,10 +62,10 @@ module top(
 
     axis_ft245 
     #(
-        .WR_SETUP_CYCLES(2),
-        .WR_PULSE_CYCLES(2),
-        .RD_PULSE_CYCLES(2),
-        .RD_WAIT_CYCLES(2)
+        .WR_SETUP_CYCLES(3),
+        .WR_PULSE_CYCLES(7),
+        .RD_PULSE_CYCLES(8),
+        .RD_WAIT_CYCLES(5)
     )
     ft245_inst
     (
