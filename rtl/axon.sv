@@ -209,7 +209,7 @@ always_comb begin
 end
 
 always_ff @(posedge clk) begin
-    if(~reset && ~syn_block && ~fire_in && ~scan_done) begin
+    if(~reset && ~syn_block && ~scan_done && !(axon_rdy && axon_vld)) begin
         scan_inc <= 1;
     end
     else begin
@@ -227,9 +227,16 @@ end
 logic [7:0]  active_id;
 logic [23:0] config_reg;
 logic        fire_out;
+logic [7:0]  last_scan_id;
+logic        last_scan_started;
 
 always_ff @(posedge clk) begin
     delay_wr_en   <= 0;
+
+    if(reset || next_step) begin
+        last_scan_id <= 0;
+        last_scan_started <= 0;
+    end
 
     if(~reset && ~syn_block && (fire_in || ~scan_done)) begin
         active_id     <= rd_id;
@@ -246,18 +253,43 @@ always_ff @(posedge clk) begin
             end
             else begin
                 // save to delay
-                delay_wr_data <= delay_rd_data | (1 << (config_rd_data[23:20]-1));
                 delay_wr_en   <= 1;
+
+                if(rd_id <= last_scan_id && last_scan_started) begin
+                    // scan has already shifted this axon
+                    delay_wr_data <= delay_rd_data | (1 << (config_rd_data[23:20]-1));
+                end
+                else begin
+                    // scan hasn't gotten to this axon
+                    delay_wr_data <= delay_rd_data | (1 << (config_rd_data[23:20]));
+                end
             end
         end
         // This is just an activity scan
         else begin
-            if(delay_rd_data[0] == 1) begin
-                fire_out <= 1;
-            end
+            if(rd_id == delay_wr_addr) begin
+                // special case: scan immediately after fire
+                if(delay_wr_data[0] == 1) begin
+                    fire_out <= 1;
+                end
 
-            delay_wr_data <= delay_rd_data >> 1;
-            delay_wr_en   <= 1;
+                last_scan_id      <= rd_id;
+                last_scan_started <= 1;
+
+                delay_wr_data <= delay_wr_data >> 1;
+                delay_wr_en   <= 1;
+            end
+            else begin
+                if(delay_rd_data[0] == 1) begin
+                    fire_out <= 1;
+                end
+
+                last_scan_id      <= rd_id;
+                last_scan_started <= 1;
+
+                delay_wr_data <= delay_rd_data >> 1;
+                delay_wr_en   <= 1;
+            end
         end
     end
 end
