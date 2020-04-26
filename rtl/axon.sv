@@ -9,7 +9,7 @@
 `define uCaspian_Axon_SV
 
 `include "dp_ram.sv"
-`include "find_set_bit.sv"
+//`include "find_set_bit.sv"
 
 module ucaspian_axon(
     input               clk,
@@ -131,21 +131,19 @@ always_ff @(posedge clk) begin
     end
 end
 
-logic arb_block;
 logic syn_block;
 
-always_comb axon_rdy = ~arb_block && ~syn_block;
+always_comb axon_rdy = ~syn_block;
 always_comb syn_block = ~syn_rdy && fire_out;
-always_comb arb_block = 0; // TODO: change this once needed
 
 always_ff @(posedge clk) begin
-    step_done <= ~syn_block && ~arb_block && ~incoming_rd && ~config_rd_en && ~fire_out;
+    step_done <= ~syn_block && ~incoming_rd && ~config_rd_en && ~fire_out && scan_done;
 end
 
 logic [7:0] incoming_addr;
 logic       incoming_rd;
 
-// Stage 1a: Accept fires from neuron
+// Accept fires from neuron
 always_ff @(posedge clk) begin
     if(reset) begin
         incoming_addr <= 0;
@@ -160,51 +158,120 @@ always_ff @(posedge clk) begin
     end
 end
 
-// Stage 1b: Scan current activity
-//   This block owns the READ port for ACTIVITY
+// Activity scan counter
+logic [7:0] scan_idx;
+logic       scan_done;
+logic       scan_inc;
+
 always_ff @(posedge clk) begin
-    // TODO
+    if(reset || next_step || ~enable) begin
+        scan_idx  <= 0;
+        scan_done <= 0;
+    end
+    else if(scan_idx == 255) begin
+        scan_idx  <= 0;
+        scan_done <= 1;
+    end
+    else if(~scan_done && ~syn_block && scan_inc) begin
+        scan_idx  <= scan_idx + 1;
+        scan_done <= 0;
+    end
 end
 
-// Stage 2: Arbitrate incoming & current activity
-//   This block owns the READ port for CONFIG
-//   Prioritze incoming fires to keep the pipeline flowing
-always_ff @(posedge clk) begin
-    // TODO
-    // Currently a pass-thru for inconing fires
-    if(reset) begin
-        config_rd_addr <= 0;
-        config_rd_en   <= 0;
+// Mux incoming fires & activity scan
+logic fire_in_pre;
+logic fire_in;
+always_comb begin
+    if(incoming_rd) begin
+        // Get the incoming fire
+        config_rd_addr = incoming_addr;
+        delay_rd_addr  = incoming_addr;
+        config_rd_en   = 1;
+        delay_rd_en    = 1;
+        fire_in_pre    = 1;
     end
-    else if(incoming_rd) begin
-        config_rd_addr <= incoming_addr;
-        config_rd_en   <= incoming_rd;
+    else if(~scan_done) begin
+        // Get next axon id
+        config_rd_addr = scan_idx;
+        delay_rd_addr  = scan_idx;
+        config_rd_en   = 1;
+        delay_rd_en    = 1;
+        fire_in_pre    = 0;
     end
     else begin
-        config_rd_en   <= 0;
+        // Done for now... 
+        config_rd_addr = 0;
+        delay_rd_addr  = 0;
+        config_rd_en   = 0;
+        delay_rd_en    = 0;
+        fire_in_pre    = 0;
     end
 end
 
-// Stage 3: Update activity, Pull out config info // 
-//   This block owns the WRITE port for ACTIVITY
-logic [23:0] config_reg;
-logic        fire_out;
 always_ff @(posedge clk) begin
-    // TODO
-    if(reset) fire_out <= 0;
-    else if(syn_block) fire_out <= 1;
-    else fire_out <= config_rd_en;
+    if(~reset && ~syn_block && ~fire_in && ~scan_done) begin
+        scan_inc <= 1;
+    end
+    else begin
+        scan_inc <= 0;
+    end
 end
 
-// Stage 4: Output to synapse
+logic [7:0] rd_id;
+
+always_ff @(posedge clk) begin
+    rd_id   <= config_rd_addr;
+    fire_in <= fire_in_pre;
+end
+
+logic [7:0]  active_id;
+logic [23:0] config_reg;
+logic        fire_out;
+
+always_ff @(posedge clk) begin
+    delay_wr_en   <= 0;
+
+    if(~reset && ~syn_block && (fire_in || ~scan_done)) begin
+        active_id     <= rd_id;
+        config_reg    <= config_rd_data;
+        delay_wr_addr <= rd_id;
+        delay_wr_data <= 0;
+        fire_out      <= 0;
+
+        // This is a new fire coming in
+        if(fire_in) begin
+            if(config_rd_data[23:20] == 0) begin
+                // No delay; pass it through
+                fire_out <= 1;
+            end
+            else begin
+                // save to delay
+                delay_wr_data <= delay_rd_data | (1 << (config_rd_data[23:20]-1));
+                delay_wr_en   <= 1;
+            end
+        end
+        // This is just an activity scan
+        else begin
+            if(delay_rd_data[0] == 1) begin
+                fire_out <= 1;
+            end
+
+            delay_wr_data <= delay_rd_data >> 1;
+            delay_wr_en   <= 1;
+        end
+    end
+end
+
+
+// Output to synapse
 always_ff @(posedge clk) begin
     if(syn_vld && syn_rdy) begin
         syn_vld <= 0;
     end
 
-    if(fire_out && config_rd_data[7:0] != 0) begin
-        syn_start <= config_rd_data[19:8];
-        syn_end   <= config_rd_data[19:8] + (config_rd_data[7:0] - 1);
+    if(fire_out && config_reg[7:0] != 0) begin
+        syn_start <= config_reg[19:8];
+        syn_end   <= config_reg[19:8] + (config_reg[7:0] - 1);
         syn_vld   <= 1;
     end
 end
