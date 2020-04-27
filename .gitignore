@@ -5,3 +5,5 @@ vmod/
 build/
 *.d
 __pycache__/
+*.bk
+*.old
