@@ -90,9 +90,10 @@ dp_ram_16x256 delay_ram_inst(
 
 logic [7:0] config_clear_addr;
 logic       config_clear_done;
+logic       act_clear_done;
 
 always_ff @(posedge clk) begin
-    clear_done <= (clear_config && config_clear_done) || (clear_act); 
+    clear_done <= (clear_config && config_clear_done && act_clear_done) || (clear_act && act_clear_done); 
 end
 
 // Configuration & Clearing
@@ -102,6 +103,8 @@ always_ff @(posedge clk) begin
     config_clear_addr <= 0;
 
     if(clear_config) begin
+        config_clear_done <= 0;
+
         // clear addres counter (0 -> 255 & stop)
         if(config_clear_addr < 255) begin
             config_clear_addr <= config_clear_addr + 1;
@@ -229,21 +232,43 @@ logic [23:0] config_reg;
 logic        fire_out;
 logic [7:0]  last_scan_id;
 logic        last_scan_started;
+logic        last_did_fire;
+logic [7:0]  act_clear_addr;
 
 always_ff @(posedge clk) begin
-    delay_wr_en   <= 0;
+    delay_wr_en    <= 0;
+    act_clear_addr <= 0;
 
     if(reset || next_step) begin
-        last_scan_id <= 0;
+        last_scan_id      <= 0;
         last_scan_started <= 0;
+        fire_out          <= 0;
     end
 
-    if(~reset && ~syn_block && (fire_in || ~scan_done)) begin
+    if(clear_config || clear_act) begin
+        act_clear_done <= 0;
+
+        if(act_clear_addr < 255) begin
+            act_clear_addr <= act_clear_addr + 1;
+        end
+        else begin
+            act_clear_addr <= act_clear_addr;
+            act_clear_done <= 1;
+        end
+
+        delay_wr_addr <= act_clear_addr;
+        delay_wr_data <= 0;
+        delay_wr_en   <= ~act_clear_done;
+
+        fire_out      <= 0;
+    end
+    else if(~reset && ~syn_block && (fire_in || ~scan_done)) begin
         active_id     <= rd_id;
         config_reg    <= config_rd_data;
         delay_wr_addr <= rd_id;
         delay_wr_data <= 0;
         fire_out      <= 0;
+        last_did_fire <= 0;
 
         // This is a new fire coming in
         if(fire_in) begin
@@ -254,6 +279,7 @@ always_ff @(posedge clk) begin
             else begin
                 // save to delay
                 delay_wr_en   <= 1;
+                last_did_fire <= 1;
 
                 if(rd_id <= last_scan_id && last_scan_started) begin
                     // scan has already shifted this axon
@@ -267,7 +293,7 @@ always_ff @(posedge clk) begin
         end
         // This is just an activity scan
         else begin
-            if(rd_id == delay_wr_addr) begin
+            if(rd_id == delay_wr_addr && last_did_fire) begin
                 // special case: scan immediately after fire
                 if(delay_wr_data[0] == 1) begin
                     fire_out <= 1;
