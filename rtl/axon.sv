@@ -242,8 +242,9 @@ always_ff @(posedge clk) begin
     if(reset || next_step) begin
         last_scan_id      <= 0;
         last_scan_started <= 0;
-        fire_out          <= 0;
     end
+
+    if(~syn_block) fire_out <= 0;
 
     if(clear_config || clear_act) begin
         act_clear_done <= 0;
@@ -320,17 +321,23 @@ always_ff @(posedge clk) begin
     end
 end
 
-
 // Output to synapse
+logic syn_wait;
+
 always_ff @(posedge clk) begin
-    if(syn_vld && syn_rdy) begin
-        syn_vld <= 0;
+    if(syn_rdy && syn_vld) begin
+        syn_wait <= 0;
+        syn_vld  <= 0;
+    end
+    else if(~syn_wait) begin
+        syn_vld  <= 0;
     end
 
     if(fire_out && config_reg[7:0] != 0) begin
         syn_start <= config_reg[19:8];
         syn_end   <= config_reg[19:8] + (config_reg[7:0] - 1);
         syn_vld   <= 1;
+        syn_wait  <= ~syn_rdy;
     end
 end
 
