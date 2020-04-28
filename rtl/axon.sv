@@ -136,8 +136,8 @@ end
 
 logic syn_block;
 
+always_comb syn_block = syn_wait; //(~syn_rdy && fire_out) || syn_wait;
 always_comb axon_rdy = ~syn_block;
-always_comb syn_block = ~syn_rdy && fire_out;
 
 always_ff @(posedge clk) begin
     step_done <= ~syn_block && ~incoming_rd && ~config_rd_en && ~fire_out && scan_done;
@@ -189,16 +189,16 @@ always_comb begin
         // Get the incoming fire
         config_rd_addr = incoming_addr;
         delay_rd_addr  = incoming_addr;
-        config_rd_en   = 1;
-        delay_rd_en    = 1;
+        config_rd_en   = ~syn_block;
+        delay_rd_en    = ~syn_block;
         fire_in_pre    = 1;
     end
     else if(~scan_done) begin
         // Get next axon id
         config_rd_addr = scan_idx;
         delay_rd_addr  = scan_idx;
-        config_rd_en   = 1;
-        delay_rd_en    = 1;
+        config_rd_en   = ~syn_block;
+        delay_rd_en    = ~syn_block;
         fire_in_pre    = 0;
     end
     else begin
@@ -223,8 +223,10 @@ end
 logic [7:0] rd_id;
 
 always_ff @(posedge clk) begin
-    rd_id   <= config_rd_addr;
-    fire_in <= fire_in_pre;
+    if(~syn_block) begin
+        rd_id   <= config_rd_addr;
+        fire_in <= fire_in_pre;
+    end
 end
 
 logic [7:0]  active_id;
@@ -244,7 +246,9 @@ always_ff @(posedge clk) begin
         last_scan_started <= 0;
     end
 
-    if(~syn_block) fire_out <= 0;
+    fire_out <= 0;
+
+    //if(~syn_block) fire_out <= 0;
 
     if(clear_config || clear_act) begin
         act_clear_done <= 0;
@@ -323,21 +327,35 @@ end
 
 // Output to synapse
 logic syn_wait;
+logic send_syn;
+logic new_send;
+
+logic last_syn_rdy;
+always_ff @(posedge clk) last_syn_rdy <= syn_rdy;
+
+logic last_syn_vld;
+always_ff @(posedge clk) last_syn_vld <= syn_vld;
+
+always_comb syn_vld  = syn_rdy && send_syn;
+always_comb syn_wait = ~last_syn_rdy && send_syn;
+
+logic [8:0] last_sent;
 
 always_ff @(posedge clk) begin
-    if(syn_rdy && syn_vld) begin
-        syn_wait <= 0;
-        syn_vld  <= 0;
-    end
-    else if(~syn_wait) begin
-        syn_vld  <= 0;
+    new_send  <= 0;
+
+    if(reset || next_step) begin
+        last_sent <= 9'b111111111;
     end
 
-    if(fire_out && config_reg[7:0] != 0) begin
+    if(~syn_wait && ~new_send) send_syn <= 0;
+
+    if( (active_id != last_sent) && ((syn_rdy && syn_vld) || ~syn_wait) && (fire_out && config_reg[7:0] != 0) ) begin
         syn_start <= config_reg[19:8];
         syn_end   <= config_reg[19:8] + (config_reg[7:0] - 1);
-        syn_vld   <= 1;
-        syn_wait  <= ~syn_rdy;
+        send_syn  <= 1;
+        last_sent <= active_id;
+        new_send  <= 1;
     end
 end
 
