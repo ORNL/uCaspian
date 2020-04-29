@@ -232,7 +232,6 @@ end
 logic [7:0]  active_id;
 logic [23:0] config_reg;
 logic        fire_out;
-logic        last_fire_out;
 logic [7:0]  last_scan_id;
 logic        last_scan_started;
 logic        last_did_fire;
@@ -240,19 +239,15 @@ logic [7:0]  act_clear_addr;
 
 always_ff @(posedge clk) begin
     delay_wr_en    <= 0;
-    act_clear_addr <= 0;
+    if(!(clear_config || clear_act)) act_clear_addr <= 0;
 
     if(reset || next_step) begin
         last_scan_id      <= 0;
         last_scan_started <= 0;
     end
 
-    last_fire_out <= fire_out;
-
     if(!(fire_out && syn_block)) fire_out <= 0;
     else fire_out <= 1;
-
-    //if(~syn_block) fire_out <= 0;
 
     if(clear_config || clear_act) begin
         act_clear_done <= 0;
@@ -267,7 +262,7 @@ always_ff @(posedge clk) begin
 
         delay_wr_addr <= act_clear_addr;
         delay_wr_data <= 0;
-        delay_wr_en   <= ~act_clear_done;
+        delay_wr_en   <= 1;
 
         fire_out      <= 0;
     end

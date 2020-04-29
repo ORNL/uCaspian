@@ -175,6 +175,9 @@ logic syn_step_done [3:0];
 logic syn_clear_done [3:0];
 logic synapse_step_done;
 logic synapse_clear_done;
+logic synapse_reset;
+
+always_comb synapse_reset = reset || clear_act || clear_config;
 
 genvar syn_i;
 generate for(syn_i = 0; syn_i < 4; syn_i = syn_i + 1) begin : synapses
@@ -183,7 +186,7 @@ generate for(syn_i = 0; syn_i < 4; syn_i = syn_i + 1) begin : synapses
 
     ucaspian_synapse syn_inst(
         .clk(clk),
-        .reset(reset),
+        .reset(synapse_reset),
         .enable(syn_enable[syn_i]),
 
         .clear_act(clear_act),
@@ -243,11 +246,15 @@ end
 logic [7:0] dend_addr;
 logic signed [8:0] dend_charge;
 logic dend_rdy, dend_vld;
+logic dend_mux_reset;
+logic dend_mux_enable;
+always_comb dend_mux_reset = reset || clear_act || clear_config;
+always_comb dend_mux_enable = ~clear_act && ~clear_config;
 
 dendrite_mux dendrite_mux_inst(
     .clk(clk),
-    .reset(reset),
-    .enable(enable),
+    .reset(dend_mux_reset),
+    .enable(dend_mux_enable),
 
     // input fires go straight to the dendrite
     .incoming_addr(dend_in_addr),
@@ -287,7 +294,9 @@ logic neuron_rdy, neuron_vld;
 
 logic dendrite_step_done;
 logic dendrite_clear_done;
-logic dendrite_enable = 1; // TODO
+logic dendrite_enable;
+always_comb dendrite_enable = ~clear_act && ~clear_config;
+
 ucaspian_dendrite dendrite_inst(
     .clk(clk),
     .reset(reset),
@@ -319,7 +328,7 @@ logic neuron_output_rdy, neuron_output_vld;
 
 logic neuron_clear_done;
 logic neuron_step_done;
-logic neuron_enable = 1; // TODO
+logic neuron_enable = ~clear_act && ~clear_config;
 ucaspian_neuron neuron_inst(
     .clk(clk),
     .reset(reset),
@@ -381,9 +390,7 @@ logic axon_syn_rdy, axon_syn_vld;
 logic axon_clear_done;
 logic axon_step_done;
 logic axon_enable; // TODO
-always_comb begin
-    axon_enable = !clear_act && !clear_config;
-end
+always_comb axon_enable = !clear_act && !clear_config;
 ucaspian_axon axon_inst(
     .clk(clk),
     .reset(reset),

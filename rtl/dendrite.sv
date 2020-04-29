@@ -156,7 +156,7 @@ logic [15:0] activity_mask;
 
 // Mux the activity 
 always_ff @(posedge clk) begin
-    if(clear_act) begin
+    if(clear_act || clear_config) begin
         activity_0 <= 0;
         activity_1 <= 0;
     end
@@ -190,7 +190,7 @@ find_set_bit_16 detect_act_inst(
 
 logic [1:0] activity_none_hold;
 always_ff @(posedge clk) begin
-    if(reset || next_step) begin
+    if(reset || next_step || clear_act || clear_config) begin
         activity_none_hold <= 0;
     end
     else begin
@@ -212,7 +212,7 @@ always_ff @(posedge clk) begin
         activity_in <= 0;
     end
 
-    if(dend_rdy && dend_vld && ~clear_act) begin
+    if(dend_rdy && dend_vld && ~clear_act && ~clear_config) begin
         incoming_rd_addr <= dend_addr;
         incoming_charge  <= dend_charge;
         incoming_rd_en   <= 1;
@@ -226,7 +226,7 @@ always_ff @(posedge clk) begin
     incoming_charge_dly <= incoming_charge;
     incoming_wr_en      <= 0;
 
-    if(clear_act) begin
+    if(clear_act || clear_config) begin
         incoming_wr_addr <= flush_idx;
         incoming_wr_data <= 0;
         incoming_wr_en   <= 1;
@@ -279,7 +279,7 @@ always_ff @(posedge clk) begin
 
     if(reset) begin
         flush_idx     <= 0;
-        flush_state   <= SCAN_ACTIVITY;
+        flush_state   <= IDLE_ACTIVITY;
         flush_new     <= 0;
         flush_start   <= 0;
         flush_stop    <= 0;
@@ -288,7 +288,16 @@ always_ff @(posedge clk) begin
         clear_act_start <= 1;
         clear_act_end   <= 0;
     end
-    else if(clear_act) begin
+    else if(clear_act || clear_config) begin
+        // reset
+        flush_state   <= IDLE_ACTIVITY;
+        flush_new     <= 0;
+        flush_start   <= 0;
+        flush_stop    <= 0;
+        flush_done    <= 0;
+        activity_mask <= 0;
+        flush_done    <= 0;
+
 
         outgoing_rd_en <= 0;
         outgoing_wr_en <= 1;
@@ -392,7 +401,7 @@ always_ff @(posedge clk) begin
 end
 
 always_comb begin
-    if(enable && !clear_act && !clear_config) begin
+    if(enable && !clear_act && !clear_config && !clear_config) begin
         neuron_charge = outgoing_rd_data;
     end
     else begin

@@ -133,7 +133,7 @@ assign neuron_rdy = ~block;
 logic signed [15:0] in_charge;
 logic [7:0] in_addr;
 always_ff @(posedge clk) begin
-    if(reset) begin
+    if(reset || clear_act || clear_config) begin
         in_charge   <= 0;
         in_addr     <= 0;
         ram_rd_addr <= 0;
@@ -169,7 +169,7 @@ logic accum_oe;
 logic accum_en;
 
 always_ff @(posedge clk) begin
-    if(reset) begin
+    if(reset || clear_act || clear_config) begin
         accum_addr   <= 0;
         accum_charge <= 0;
         accum_thresh <= 0;
@@ -228,6 +228,12 @@ always_ff @(posedge clk) begin
         endcase
     end
     else if(clear_act || clear_config) begin
+        // reset state
+        does_fire     <= 0;
+        output_en     <= 0;
+        fire_addr     <= 0;
+        config_thresh <= 0;
+
         // clear address counter (0->255, then signal done)
         if(clear_addr == 255) clear_done <= 1;
         if(~clear_done) clear_addr <= clear_addr + 1;

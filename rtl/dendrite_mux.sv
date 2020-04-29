@@ -43,6 +43,7 @@ module dendrite_mux(
 );
 
 localparam [2:0] IN_PORT = 4;
+localparam [2:0] RST_PORT = 5;
 
 // TODO
 
@@ -67,7 +68,7 @@ logic [2:0] syn_select;
 
 always_ff @(posedge clk) begin
     if(reset) begin
-        syn_select <= 0;
+        syn_select <= RST_PORT;
     end
     else begin
         if(syn_vld[IN_PORT])
