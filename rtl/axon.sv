@@ -232,6 +232,7 @@ end
 logic [7:0]  active_id;
 logic [23:0] config_reg;
 logic        fire_out;
+logic        last_fire_out;
 logic [7:0]  last_scan_id;
 logic        last_scan_started;
 logic        last_did_fire;
@@ -246,7 +247,10 @@ always_ff @(posedge clk) begin
         last_scan_started <= 0;
     end
 
-    fire_out <= 0;
+    last_fire_out <= fire_out;
+
+    if(!(fire_out && syn_block)) fire_out <= 0;
+    else fire_out <= 1;
 
     //if(~syn_block) fire_out <= 0;
 
