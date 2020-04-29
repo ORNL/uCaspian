@@ -202,6 +202,8 @@ end
 logic accumulate_done;
 logic signed [8:0] incoming_charge;
 logic incoming_rd_dly;
+logic [7:0] incoming_addr_dly;
+logic signed [8:0] incoming_charge_dly;
 always_ff @(posedge clk) begin
     if(!next_step && !clr_act_vec)
         dend_rdy <= 1;
@@ -219,8 +221,10 @@ always_ff @(posedge clk) begin
         incoming_rd_en   <= 0;
     end
 
-    incoming_rd_dly <= incoming_rd_en;
-    incoming_wr_en   <= 0;
+    incoming_addr_dly   <= incoming_rd_addr;
+    incoming_rd_dly     <= incoming_rd_en;
+    incoming_charge_dly <= incoming_charge;
+    incoming_wr_en      <= 0;
 
     if(clear_act) begin
         incoming_wr_addr <= flush_idx;
@@ -228,8 +232,9 @@ always_ff @(posedge clk) begin
         incoming_wr_en   <= 1;
     end
     else if(incoming_rd_dly) begin
-        incoming_wr_addr <= incoming_rd_addr;
-        incoming_wr_data <= $signed(incoming_rd_data) + $signed(incoming_charge);
+        incoming_wr_addr <= incoming_addr_dly; // incoming_rd_addr;
+        //incoming_wr_data <= $signed(incoming_rd_data) + $signed(incoming_charge);
+        incoming_wr_data <= $signed(incoming_rd_data) + $signed(incoming_charge_dly);
         incoming_wr_en   <= 1;
         activity_in[incoming_rd_addr[7:4]] <= 1;
     end
