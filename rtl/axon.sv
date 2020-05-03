@@ -124,7 +124,7 @@ always_ff @(posedge clk) begin
         case(config_byte)
             1: config_wr_data        <= 0;
             2: config_wr_data[23:20] <= config_value[7:4];
-            3: config_wr_data[19:16] <= config_value[3:0];
+            3: config_wr_data[19:16] <= config_value[11:8];
             4: config_wr_data[15:8]  <= config_value[7:0];
             5: begin
                 config_wr_data[7:0]  <= config_value[7:0];
