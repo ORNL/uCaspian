@@ -162,7 +162,7 @@ always_ff @(posedge clk) begin
 end
 
 // Stage 2: Accumulate charge // TODO: Leak
-logic signed [15:0] accum_charge;
+logic signed [16:0] accum_charge;
 logic [7:0] accum_addr;
 logic [7:0] accum_thresh;
 logic accum_oe;
@@ -265,7 +265,7 @@ always_ff @(posedge clk) begin
         // ftime_wr_en   <= 1;
 
         // FIRE!
-        if(accum_charge > $signed({8'd0, accum_thresh})) begin
+        if($signed(accum_charge) > $signed({8'd0, accum_thresh})) begin
             charge_wr_data <= 0;
             does_fire      <= 1;
             output_en      <= accum_oe;
@@ -297,6 +297,8 @@ always_ff @(posedge clk) begin
         block <= 1;
     end
     else if(does_fire) begin
+        output_addr <= fire_addr;
+        axon_addr   <= fire_addr;
         // we sent the fire, drop vld back low
         if(axon_vld) begin
             axon_vld    <= 0;
@@ -304,9 +306,9 @@ always_ff @(posedge clk) begin
         end
         // we can send the fire, so lets do it
         else if(output_en && output_rdy && axon_rdy) begin
-            output_addr <= fire_addr;
+            //output_addr <= fire_addr;
+            //axon_addr   <= fire_addr;
             output_vld  <= 1;
-            axon_addr   <= fire_addr;
             axon_vld    <= 1;
             block       <= 0;
         end
