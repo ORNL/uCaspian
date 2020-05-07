@@ -238,7 +238,7 @@ always_ff @(posedge clk) begin
     else if(incoming_rd_dly) begin
         incoming_wr_addr <= incoming_addr_dly; // incoming_rd_addr;
         incoming_wr_en   <= 1;
-        activity_in[incoming_rd_addr[7:4]] <= 1;
+        activity_in[incoming_addr_dly[7:4]] <= 1;
 
         last_wr_addr     <= incoming_addr_dly;
         last_wr_flag     <= 1;
