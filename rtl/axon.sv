@@ -336,7 +336,8 @@ logic last_syn_vld;
 always_ff @(posedge clk) last_syn_vld <= syn_vld;
 
 always_comb syn_vld  = syn_rdy && send_syn;
-always_comb syn_wait = ~last_syn_rdy && send_syn;
+//always_comb syn_wait = ~last_syn_rdy && send_syn;
+always_comb syn_wait = (~last_syn_rdy && send_syn) || (syn_start != syn_end && syn_vld);
 
 logic [8:0] last_sent;
 
