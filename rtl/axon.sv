@@ -152,6 +152,10 @@ always_ff @(posedge clk) begin
         incoming_addr <= 0;
         incoming_rd   <= 0;
     end
+    else if(syn_block) begin
+        incoming_addr <= incoming_addr;
+        incoming_rd   <= incoming_rd;
+    end
     else if(axon_vld && axon_rdy) begin
         incoming_addr <= axon_addr;
         incoming_rd   <= 1;
@@ -335,9 +339,11 @@ always_ff @(posedge clk) last_syn_rdy <= syn_rdy;
 logic last_syn_vld;
 always_ff @(posedge clk) last_syn_vld <= syn_vld;
 
+logic syn_wait_seq;
+always_ff @(posedge clk) syn_wait_seq <= (syn_start != syn_end && syn_vld);
+
 always_comb syn_vld  = syn_rdy && send_syn;
-//always_comb syn_wait = ~last_syn_rdy && send_syn;
-always_comb syn_wait = (~last_syn_rdy && send_syn) || (syn_start != syn_end && syn_vld);
+always_comb syn_wait = (~last_syn_rdy && send_syn) || syn_wait_seq;
 
 logic [8:0] last_sent;
 
@@ -348,7 +354,7 @@ always_ff @(posedge clk) begin
         last_sent <= 9'b111111111;
     end
 
-    if(~syn_wait && ~new_send) send_syn <= 0;
+    if(last_syn_rdy && ~new_send) send_syn <= 0;
 
     if( (active_id != last_sent) && ((syn_rdy && syn_vld) || ~syn_wait) && (fire_out && config_reg[7:0] != 0) ) begin
         syn_start <= config_reg[19:8];

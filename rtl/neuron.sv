@@ -296,6 +296,11 @@ always_ff @(posedge clk) begin
     else if(clear_config || clear_act) begin
         block <= 1;
     end
+    else if((axon_vld && ~axon_rdy) || (output_vld && ~output_rdy)) begin
+        block      <= 1;
+        axon_vld   <= axon_vld && ~axon_rdy;
+        output_vld <= output_vld && ~output_rdy;
+    end
     else if(does_fire) begin
         output_addr <= fire_addr;
         axon_addr   <= fire_addr;
