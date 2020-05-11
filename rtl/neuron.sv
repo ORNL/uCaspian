@@ -168,6 +168,20 @@ logic [7:0] accum_thresh;
 logic accum_oe;
 logic accum_en;
 
+logic signed [16:0] tmp_accum_charge;
+
+always_comb begin
+    tmp_accum_charge = $signed(in_charge) + $signed(charge_rd_data);
+
+    // Clamp charge value
+    if(tmp_accum_charge < -32768) begin
+        tmp_accum_charge = -32768;
+    end
+    else if(tmp_accum_charge > 32767) begin
+        tmp_accum_charge = 32767;
+    end
+end
+
 always_ff @(posedge clk) begin
     if(reset || clear_act || clear_config) begin
         accum_addr   <= 0;
@@ -178,7 +192,7 @@ always_ff @(posedge clk) begin
     end
     else if(~block & stage_2_en) begin
         accum_addr   <= in_addr;
-        accum_charge <= $signed(in_charge) + $signed(charge_rd_data);
+        accum_charge <= tmp_accum_charge;
         accum_thresh <= config_rd_data[7:0];
         accum_oe     <= config_rd_data[11];
         accum_en     <= 1;
@@ -273,7 +287,7 @@ always_ff @(posedge clk) begin
         end
         else begin
             // If we don't fire, then write back the residual charge
-            charge_wr_data <= accum_charge;
+            charge_wr_data <= accum_charge[15:0];
             does_fire      <= 0;
         end
     end
