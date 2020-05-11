@@ -106,9 +106,10 @@ always_ff @(posedge clk) begin
             if(cur_syn_rdy && cur_syn_vld) begin
                 if(cur_idx == last_idx) begin
                     // stop condition
-                    iterating <= 0;
-                    last_idx  <= 0;
-                    cur_idx   <= 0;
+                    iterating   <= 0;
+                    last_idx    <= 0;
+                    cur_idx     <= 0;
+                    cur_syn_vld <= 0;
                 end
                 else begin
                     // keep iterating
