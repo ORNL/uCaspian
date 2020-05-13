@@ -189,6 +189,12 @@ end
 logic fire_in_pre;
 logic fire_in;
 always_comb begin
+    config_rd_addr = 0;
+    delay_rd_addr  = 0;
+    config_rd_en   = 0;
+    delay_rd_en    = 0;
+    fire_in_pre    = 0;
+
     if(incoming_rd) begin
         // Get the incoming fire
         config_rd_addr = incoming_addr;
@@ -203,14 +209,6 @@ always_comb begin
         delay_rd_addr  = scan_idx;
         config_rd_en   = ~syn_block;
         delay_rd_en    = ~syn_block;
-        fire_in_pre    = 0;
-    end
-    else begin
-        // Done for now... 
-        config_rd_addr = 0;
-        delay_rd_addr  = 0;
-        config_rd_en   = 0;
-        delay_rd_en    = 0;
         fire_in_pre    = 0;
     end
 end
@@ -289,9 +287,12 @@ always_ff @(posedge clk) begin
                 delay_wr_en   <= 1;
                 last_did_fire <= 1;
 
-                if(rd_id <= last_scan_id && last_scan_started) begin
+                if(rd_id < last_scan_id && last_scan_started) begin
                     // scan has already shifted this axon
                     delay_wr_data <= delay_rd_data | (1 << (config_rd_data[23:20]-1));
+                end
+                else if (rd_id == last_scan_id && last_scan_started) begin
+                    delay_wr_data <= delay_wr_data | (1 << (config_rd_data[23:20]-1));
                 end
                 else begin
                     // scan hasn't gotten to this axon
