@@ -96,9 +96,6 @@ always_ff @(posedge clk) begin
     clear_done <= (clear_config && config_clear_done && act_clear_done) || (clear_act && act_clear_done); 
 end
 
-// temporary
-always_comb act_clear_done = 1;
-
 // Configuration & Clearing
 //   This block owns the WRITE port for CONFIG
 always_ff @(posedge clk) begin
@@ -220,6 +217,8 @@ always_ff @(posedge clk) begin
     end
 end
 
+logic [7:0] clear_addr;
+
 // Process Spike (config lookup, delay)
 always_ff @(posedge clk) begin
 
@@ -230,6 +229,21 @@ always_ff @(posedge clk) begin
     if(outgoing_vld && outgoing_rdy) outgoing_vld <= 0;
 
     if(reset || clear_act || clear_config || next_step) scan_started <= 0;
+    
+    if(~clear_act && ~clear_config) begin
+        clear_addr     <= 0; 
+        act_clear_done <= 0;
+    end
+
+    // Clear logic
+    if(clear_act || clear_config) begin
+        if(~act_clear_done) clear_addr <= clear_addr + 1; 
+        if(clear_addr == 255) act_clear_done <= 1;
+        
+        delay_wr_addr <= clear_addr;
+        delay_wr_data <= 0;
+        delay_wr_en   <= ~act_clear_done;
+    end
 
     // process spike
     if(active_todo) begin
