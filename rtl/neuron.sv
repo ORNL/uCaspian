@@ -310,6 +310,19 @@ always_ff @(posedge clk) begin
     end
 end
 
+logic does_fire_dly;
+/*
+always_ff @(posedge clk) begin
+    if(reset) does_fire_dly <= 0;
+    else if((axon_vld || output_vld) && block) does_fire_dly <= 0;
+    else does_fire_dly <= does_fire;
+end
+*/
+logic does_fire_w;
+always_comb begin
+    if((axon_vld || output_vld) && block) does_fire_w = 0;
+    else does_fire_w = does_fire;
+end
 
 // Stage 4: Output fire if necessary
 always_ff @(posedge clk) begin
@@ -320,14 +333,16 @@ always_ff @(posedge clk) begin
         block <= 0;
     end
     else if(clear_config || clear_act) begin
-        block <= 1;
+        // block <= 1;
+        block <= 0;
     end
     else if((axon_vld && ~axon_rdy) || (output_vld && ~output_rdy)) begin
         block      <= 1;
         axon_vld   <= axon_vld && ~axon_rdy;
         output_vld <= output_vld && ~output_rdy;
     end
-    else if(does_fire) begin
+    //else if(does_fire) begin
+    else if(does_fire_w) begin
         output_addr <= fire_addr;
         axon_addr   <= fire_addr;
         // we sent the fire, drop vld back low
@@ -337,8 +352,6 @@ always_ff @(posedge clk) begin
         end
         // we can send the fire, so lets do it
         else if(output_en && output_rdy && axon_rdy) begin
-            //output_addr <= fire_addr;
-            //axon_addr   <= fire_addr;
             output_vld  <= 1;
             axon_vld    <= 1;
             block       <= 0;
