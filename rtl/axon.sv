@@ -96,6 +96,9 @@ always_ff @(posedge clk) begin
     clear_done <= (clear_config && config_clear_done && act_clear_done) || (clear_act && act_clear_done); 
 end
 
+// temporary
+always_comb act_clear_done = 1;
+
 // Configuration & Clearing
 //   This block owns the WRITE port for CONFIG
 always_ff @(posedge clk) begin
@@ -134,236 +137,209 @@ always_ff @(posedge clk) begin
     end
 end
 
-logic syn_block;
-
-always_comb syn_block = syn_wait; //(~syn_rdy && fire_out) || syn_wait;
-always_comb axon_rdy = ~syn_block;
-
-always_ff @(posedge clk) begin
-    step_done <= ~syn_block && ~incoming_rd && ~config_rd_en && ~fire_out && scan_done;
-end
-
-logic [7:0] incoming_addr;
-logic       incoming_rd;
-
-// Accept fires from neuron
-always_ff @(posedge clk) begin
-    if(reset) begin
-        incoming_addr <= 0;
-        incoming_rd   <= 0;
-    end
-    else if(syn_block) begin
-        incoming_addr <= incoming_addr;
-        incoming_rd   <= incoming_rd;
-    end
-    else if(axon_vld && axon_rdy) begin
-        incoming_addr <= axon_addr;
-        incoming_rd   <= 1;
-    end
-    else begin
-        incoming_rd <= 0;
-    end
-end
-
-// Activity scan counter
+// Activity scan state
 logic [7:0] scan_idx;
 logic       scan_done;
-logic       scan_inc;
 
+// incoming -> process spike
+logic [7:0] incoming_addr;
+logic       incoming_spike; // 0 = activity scan, 1 = new spike
+logic       incoming_vld;
+logic       incoming_rdy;
+
+// Incoming fires and Activity Scan
 always_ff @(posedge clk) begin
-    if(reset || next_step || ~enable) begin
-        scan_idx  <= 0;
-        scan_done <= 0;
+    // reset state
+    if(reset || clear_config || clear_act || next_step) begin
+        incoming_addr  <= 0;
+        incoming_spike <= 0;
+        incoming_vld   <= 0;
+        scan_done      <= 0; 
     end
-    else if(scan_idx == 255) begin
-        scan_idx  <= 0;
-        scan_done <= 1;
+    // wait if we tried to send
+    else if(incoming_vld && ~incoming_rdy) begin
+        incoming_addr  <= incoming_addr;
+        incoming_spike <= incoming_spike;
+        incoming_vld   <= 1;
     end
-    else if(~scan_done && ~syn_block && scan_inc) begin
-        scan_idx  <= scan_idx + 1;
-        scan_done <= 0;
+    // Priority: Get incoming fires
+    else if(axon_vld && axon_rdy) begin
+        incoming_addr  <= axon_addr;
+        incoming_spike <= 1;
+        incoming_vld   <= 1;
     end
-end
-
-// Mux incoming fires & activity scan
-logic fire_in_pre;
-logic fire_in;
-always_comb begin
-    config_rd_addr = 0;
-    delay_rd_addr  = 0;
-    config_rd_en   = 0;
-    delay_rd_en    = 0;
-    fire_in_pre    = 0;
-
-    if(incoming_rd) begin
-        // Get the incoming fire
-        config_rd_addr = incoming_addr;
-        delay_rd_addr  = incoming_addr;
-        config_rd_en   = ~syn_block;
-        delay_rd_en    = ~syn_block;
-        fire_in_pre    = 1;
-    end
+    // Activity scan
     else if(~scan_done) begin
-        // Get next axon id
-        config_rd_addr = scan_idx;
-        delay_rd_addr  = scan_idx;
-        config_rd_en   = ~syn_block;
-        delay_rd_en    = ~syn_block;
-        fire_in_pre    = 0;
-    end
-end
+        incoming_addr  <= scan_idx;
+        incoming_spike <= 0;
+        incoming_vld   <= 1;
 
-always_ff @(posedge clk) begin
-    if(~reset && ~syn_block && ~scan_done && !(axon_rdy && axon_vld)) begin
-        scan_inc <= 1;
+        // Continue scan
+        scan_idx <= scan_idx + 1;
+        if(scan_idx == 255) begin
+            scan_done <= 1;
+        end
     end
+    // Do nothing
     else begin
-        scan_inc <= 0;
+        incoming_addr  <= 0;
+        incoming_spike <= 0;
+        incoming_vld   <= 0; 
     end
 end
 
-logic [7:0] rd_id;
+// actively processing
+logic [7:0] active_addr;
+logic       active_spike;
+logic       active_todo;
 
+logic [7:0] last_active_addr;
+logic       last_active_spike;
+
+logic [7:0] last_scan_addr;
+logic       scan_started;
+
+// outgoing spikes -- axon -> spike dispatch
+logic [7:0]  outgoing_addr;
+logic [19:0] outgoing_config;
+logic        outgoing_rdy;
+logic        outgoing_vld;
+
+// Load active address
 always_ff @(posedge clk) begin
-    if(~syn_block) begin
-        rd_id   <= config_rd_addr;
-        fire_in <= fire_in_pre;
+    active_todo <= 0;
+
+    // accept incoming data
+    if(incoming_rdy && incoming_vld) begin
+        active_addr  <= incoming_addr;
+        active_spike <= incoming_spike;
+        active_todo  <= 1;
+
+        last_active_addr  <= active_addr;
+        last_active_spike <= active_spike;
     end
 end
 
-logic [7:0]  active_id;
-logic [23:0] config_reg;
-logic        fire_out;
-logic [7:0]  last_scan_id;
-logic        last_scan_started;
-logic        last_did_fire;
-logic [7:0]  act_clear_addr;
-
+// Process Spike (config lookup, delay)
 always_ff @(posedge clk) begin
-    delay_wr_en    <= 0;
-    if(!(clear_config || clear_act)) act_clear_addr <= 0;
 
-    if(reset || next_step) begin
-        last_scan_id      <= 0;
-        last_scan_started <= 0;
-    end
+    // require explicit enable, reset every cycle
+    delay_wr_en <= 0;
 
-    if(!(fire_out && syn_block)) fire_out <= 0;
-    else fire_out <= 1;
+    // reset vld after successful transaction
+    if(outgoing_vld && outgoing_rdy) outgoing_vld <= 0;
 
-    if(clear_config || clear_act) begin
-        act_clear_done <= 0;
+    if(reset || clear_act || clear_config || next_step) scan_started <= 0;
 
-        if(act_clear_addr < 255) begin
-            act_clear_addr <= act_clear_addr + 1;
-        end
-        else begin
-            act_clear_addr <= act_clear_addr;
-            act_clear_done <= 1;
-        end
-
-        delay_wr_addr <= act_clear_addr;
-        delay_wr_data <= 0;
-        delay_wr_en   <= 1;
-
-        fire_out      <= 0;
-    end
-    else if(~reset && ~syn_block && (fire_in || ~scan_done)) begin
-        active_id     <= rd_id;
-        config_reg    <= config_rd_data;
-        delay_wr_addr <= rd_id;
-        delay_wr_data <= 0;
-        fire_out      <= 0;
-        last_did_fire <= 0;
-
-        // This is a new fire coming in
-        if(fire_in) begin
+    // process spike
+    if(active_todo) begin
+        if(active_spike) begin
             if(config_rd_data[23:20] == 0) begin
-                // No delay; pass it through
-                fire_out <= 1;
+                // No delay
+                outgoing_addr   <= active_addr;
+                outgoing_config <= config_rd_data[19:0];
+                outgoing_vld    <= 1;
             end
             else begin
-                // save to delay
-                delay_wr_en   <= 1;
-                last_did_fire <= 1;
-
-                if(rd_id < last_scan_id && last_scan_started) begin
-                    // scan has already shifted this axon
+                // write delay & determine if this has been shifted already
+                if(active_addr < last_scan_addr && scan_started) begin
+                    // this will shifted later this timestep
                     delay_wr_data <= delay_rd_data | (1 << (config_rd_data[23:20]-1));
                 end
-                else if (rd_id == last_scan_id && last_scan_started) begin
+                else if(active_addr == last_scan_addr && scan_started) begin
                     delay_wr_data <= delay_wr_data | (1 << (config_rd_data[23:20]-1));
                 end
                 else begin
-                    // scan hasn't gotten to this axon
+                    // this has already been shfited this timestep
                     delay_wr_data <= delay_rd_data | (1 << (config_rd_data[23:20]));
                 end
+
+                delay_wr_addr <= active_addr;
+                delay_wr_en   <= 1;
             end
         end
-        // This is just an activity scan
+        // scan activity for a spike
         else begin
-            if(rd_id == delay_wr_addr && last_did_fire) begin
-                // special case: scan immediately after fire
+            last_scan_addr <= active_addr;
+            scan_started   <= 1;
+            
+            delay_wr_addr <= active_addr;
+            delay_wr_en   <= 1;
+
+            if(active_addr == last_active_addr) begin
+                // send for output
                 if(delay_wr_data[0] == 1) begin
-                    fire_out <= 1;
+                    outgoing_addr   <= active_addr;
+                    outgoing_config <= config_rd_data[19:0];
+                    outgoing_vld    <= 1;
                 end
-
-                last_scan_id      <= rd_id;
-                last_scan_started <= 1;
-
                 delay_wr_data <= delay_wr_data >> 1;
-                delay_wr_en   <= 1;
             end
             else begin
+                // send for output
                 if(delay_rd_data[0] == 1) begin
-                    fire_out <= 1;
+                    outgoing_addr   <= active_addr;
+                    outgoing_config <= config_rd_data[19:0];
+                    outgoing_vld    <= 1;
                 end
-
-                last_scan_id      <= rd_id;
-                last_scan_started <= 1;
-
                 delay_wr_data <= delay_rd_data >> 1;
-                delay_wr_en   <= 1;
             end
+        end
+    end
+    
+end
+
+always_comb config_rd_addr = incoming_addr;
+always_comb delay_rd_addr  = incoming_addr;
+//always_comb delay_wr_addr  = active_addr;
+
+always_comb config_rd_en = incoming_rdy && incoming_vld;
+always_comb delay_rd_en  = incoming_rdy && incoming_vld;
+
+// blocking all the way back
+//always_comb begin
+//    if(syn_vld && ~syn_rdy) outgoing_rdy = 0;
+//    else outgoing_rdy = 1;
+//
+//    incoming_rdy = outgoing_rdy;
+//    axon_rdy     = incoming_rdy;
+//end
+always_ff @(posedge clk) begin
+    if(reset) begin
+        incoming_rdy <= 1;
+        outgoing_rdy <= 1;
+        axon_rdy     <= 1;
+    end
+    //else if(syn_vld && ~syn_rdy) begin
+    else if(~syn_rdy) begin
+        incoming_rdy <= 0;
+        outgoing_rdy <= 0;
+        axon_rdy     <= 0;
+    end
+    else begin
+        incoming_rdy <= 1;
+        outgoing_rdy <= 1;
+        axon_rdy     <= 1;
+    end
+end
+
+// Output synapse ranges
+always_ff @(posedge clk) begin
+    
+    if(syn_rdy && syn_vld) syn_vld <= 0;
+
+    if(outgoing_rdy && outgoing_vld) begin
+        if(outgoing_config[7:0] != 0) begin
+            syn_start <= outgoing_config[19:8];
+            syn_end   <= outgoing_config[19:8] + (outgoing_config[7:0] - 1);
+            syn_vld   <= 1;
         end
     end
 end
 
-// Output to synapse
-logic syn_wait;
-logic send_syn;
-logic new_send;
-
-logic last_syn_rdy;
-always_ff @(posedge clk) last_syn_rdy <= syn_rdy;
-
-logic last_syn_vld;
-always_ff @(posedge clk) last_syn_vld <= syn_vld;
-
-logic syn_wait_seq;
-always_ff @(posedge clk) syn_wait_seq <= (syn_start != syn_end && syn_vld);
-
-always_comb syn_vld  = syn_rdy && send_syn;
-always_comb syn_wait = (~last_syn_rdy && send_syn) || syn_wait_seq;
-
-logic [8:0] last_sent;
-
+// STEP DONE logic
 always_ff @(posedge clk) begin
-    new_send  <= 0;
-
-    if(reset || next_step) begin
-        last_sent <= 9'b111111111;
-    end
-
-    if(last_syn_rdy && ~new_send) send_syn <= 0;
-
-    if( (active_id != last_sent) && ((syn_rdy && syn_vld) || ~syn_wait) && (fire_out && config_reg[7:0] != 0) ) begin
-        syn_start <= config_reg[19:8];
-        syn_end   <= config_reg[19:8] + (config_reg[7:0] - 1);
-        send_syn  <= 1;
-        last_sent <= active_id;
-        new_send  <= 1;
-    end
+    step_done <= scan_done && outgoing_rdy && ~outgoing_vld && ~incoming_vld && ~axon_vld;
 end
 
 endmodule
