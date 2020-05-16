@@ -257,14 +257,15 @@ always_ff @(posedge clk) begin
             else begin
                 // write delay & determine if this has been shifted already
                 if(active_addr < last_scan_addr && scan_started) begin
-                    // this will shifted later this timestep
+                    // this has already been shfited this timestep
                     delay_wr_data <= delay_rd_data | (1 << (config_rd_data[23:20]-1));
                 end
                 else if(active_addr == last_scan_addr && scan_started) begin
+                    // this has already been shfited this timestep
                     delay_wr_data <= delay_wr_data | (1 << (config_rd_data[23:20]-1));
                 end
                 else begin
-                    // this has already been shfited this timestep
+                    // this will shifted later this timestep
                     delay_wr_data <= delay_rd_data | (1 << (config_rd_data[23:20]));
                 end
 
@@ -305,43 +306,19 @@ end
 
 always_comb config_rd_addr = incoming_addr;
 always_comb delay_rd_addr  = incoming_addr;
-//always_comb delay_wr_addr  = active_addr;
 
 always_comb config_rd_en = incoming_rdy && incoming_vld;
 always_comb delay_rd_en  = incoming_rdy && incoming_vld;
 
 // blocking all the way back
-//always_comb begin
-//    if(syn_vld && ~syn_rdy) outgoing_rdy = 0;
-//    else outgoing_rdy = 1;
-//
-//    incoming_rdy = outgoing_rdy;
-//    axon_rdy     = incoming_rdy;
-//end
-always_ff @(posedge clk) begin
-    if(reset) begin
-        incoming_rdy <= 1;
-        outgoing_rdy <= 1;
-        axon_rdy     <= 1;
-    end
-    //else if(syn_vld && ~syn_rdy) begin
-    else if(~syn_rdy) begin
-        incoming_rdy <= 0;
-        outgoing_rdy <= 0;
-        axon_rdy     <= 0;
-    end
-    else begin
-        incoming_rdy <= 1;
-        outgoing_rdy <= 1;
-        axon_rdy     <= 1;
-    end
-end
+always_comb outgoing_rdy = syn_rdy && !(syn_vld && syn_start != syn_end);
+always_comb incoming_rdy = outgoing_rdy;
+always_comb axon_rdy     = outgoing_rdy;
 
 // Output synapse ranges
 always_ff @(posedge clk) begin
+    if(syn_vld && syn_rdy) syn_vld <= 0;
     
-    if(syn_rdy && syn_vld) syn_vld <= 0;
-
     if(outgoing_rdy && outgoing_vld) begin
         if(outgoing_config[7:0] != 0) begin
             syn_start <= outgoing_config[19:8];

@@ -305,39 +305,66 @@ always_ff @(posedge clk) begin
     end
     else if(~block) begin
         // reset 'does_fire' after data is passed on 
-        if((output_en && output_rdy && axon_rdy) || (~output_en && axon_rdy))
-            does_fire <= 0;
+        //if((output_en && output_rdy && axon_rdy) || (~output_en && axon_rdy))
+        does_fire <= 0;
     end
 end
 
-logic does_fire_dly;
-/*
-always_ff @(posedge clk) begin
-    if(reset) does_fire_dly <= 0;
-    else if((axon_vld || output_vld) && block) does_fire_dly <= 0;
-    else does_fire_dly <= does_fire;
-end
-*/
+logic pre_block;
+always_comb pre_block = (axon_vld && ~axon_rdy) || (output_vld && ~output_rdy);
+
 logic does_fire_w;
 always_comb begin
-    if((axon_vld || output_vld) && block) does_fire_w = 0;
+    //if((axon_vld || output_vld) && block) does_fire_w = 0;
+    if((axon_vld && ~axon_rdy) || (output_vld && ~output_rdy)) does_fire_w = 0;
     else does_fire_w = does_fire;
 end
 
+logic last_block;
+
 // Stage 4: Output fire if necessary
 always_ff @(posedge clk) begin
+    // deassert vld
+    if(axon_vld && axon_rdy) axon_vld <= 0;
+    if(output_vld && output_rdy) output_vld <= 0;
+
+    // remember last value of block
+    last_block <= block;
+
+    // assert block
+    if(reset || clear_config || clear_act) block <= 0;
+    else if((axon_vld && ~axon_rdy) || (output_vld && ~output_rdy)) block <= 1;
+    else block <= 0;
+
+    if(reset || clear_config || clear_act) begin
+        axon_addr   <= 0;
+        output_addr <= 0;
+        axon_vld    <= 0;
+        output_vld  <= 0;
+    end
+    else if(~pre_block && ~block && ~last_block && does_fire_w) begin
+        axon_addr <= fire_addr;
+        axon_vld  <= 1;
+
+        if(output_en) begin
+            output_addr <= fire_addr;
+            output_vld  <= 1;
+        end
+    end
+
+/*
     axon_vld   <= 0;
     output_vld <= 0;
 
     if(reset) begin
-        block <= 0;
+        block_reg <= 0;
     end
     else if(clear_config || clear_act) begin
         // block <= 1;
-        block <= 0;
+        block_reg <= 0;
     end
     else if((axon_vld && ~axon_rdy) || (output_vld && ~output_rdy)) begin
-        block      <= 1;
+        block_reg  <= 1;
         axon_vld   <= axon_vld && ~axon_rdy;
         output_vld <= output_vld && ~output_rdy;
     end
@@ -354,22 +381,23 @@ always_ff @(posedge clk) begin
         else if(output_en && output_rdy && axon_rdy) begin
             output_vld  <= 1;
             axon_vld    <= 1;
-            block       <= 0;
+            block_reg   <= 0;
         end
         // not an output neuron, so it just needs to go to the axon
         else if(~output_en && axon_rdy) begin
             axon_addr <= fire_addr;
             axon_vld  <= 1;
-            block     <= 0;
+            block_reg <= 0;
         end
         // unable to send the fire, block the pipeline
         else begin
-            block <= 1;
+            block_reg <= 1;
         end
     end
     else begin
-        block <= 0;
+        block_reg <= 0;
     end
+*/
 end
 
 // indicate when we are working
