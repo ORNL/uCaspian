@@ -1,9 +1,6 @@
 #include "Vucaspian.h"
 #include "verilated.h"
-
-#ifdef TRACEON
 #include "verilated_fst_c.h"
-#endif
 
 #include "fifo.hpp"
 
@@ -22,11 +19,6 @@ int main(int argc, char **argv, char **env)
     if(argc < 3)
     {
         std::cerr << "Usage: " << argv[0] << " input_file output_file (max_steps) (trace_file) (rand_io)" << std::endl;
-#ifdef TRACEON
-        std::cerr << "  Note: compiled with tracing on" << std::endl;
-#else
-        std::cerr << "  Note: compiled with tracing off" << std::endl;
-#endif
         exit(1);
     }
 
@@ -54,13 +46,11 @@ int main(int argc, char **argv, char **env)
     // Load input
     fifo_in.push_from_file(input_file);
 
-#ifdef TRACEON
     // logging to fst file for viewing in GtkWave
     Verilated::traceEverOn(true);
     VerilatedFstC fst;
     top.trace(&fst, 99);
     fst.open(trace_name.c_str());
-#endif
 
     // Initialize ports
     top.sys_clk = 1;
@@ -72,9 +62,8 @@ int main(int argc, char **argv, char **env)
 
         for(int c = 0; c < 2; ++c)
         {
-#ifdef TRACEON
             fst.dump(2*steps+c);
-#endif
+
             top.sys_clk = !top.sys_clk;
 
             // update design
@@ -93,9 +82,7 @@ int main(int argc, char **argv, char **env)
     // write output
     fifo_out.pop_to_file(output_file);
 
-#ifdef TRACEON
     fst.close();
-#endif
 
     return 0;
 }
