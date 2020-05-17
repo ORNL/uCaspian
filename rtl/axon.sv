@@ -346,9 +346,10 @@ end
 
 logic [7:0] clear_addr;
 logic active_addr_will_shift;
+logic [3:0] a_pre;
 
 always_comb begin
-    logic [3:0] a_pre = active_addr[7:4];
+    a_pre = active_addr[7:4];
 
     if(activity[a_pre]) begin
         if(activity_mask[a_pre]) begin
