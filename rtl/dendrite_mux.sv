@@ -66,6 +66,7 @@ end
 
 logic [2:0] syn_select;
 
+/*
 always_ff @(posedge clk) begin
     if(reset) begin
         syn_select <= RST_PORT;
@@ -85,6 +86,7 @@ always_ff @(posedge clk) begin
             syn_select <= 0;
     end
 end
+*/
 
 always_comb begin
     syn_rdy[0] = 0;
@@ -92,6 +94,24 @@ always_comb begin
     syn_rdy[2] = 0;
     syn_rdy[3] = 0;
     syn_rdy[4] = 0;
+
+    if(reset) begin
+        syn_select = RST_PORT;
+    end
+    else begin
+        if(syn_vld[IN_PORT])
+            syn_select = IN_PORT;
+        else if(syn_vld[0])
+            syn_select = 0;
+        else if(syn_vld[1])
+            syn_select = 1;
+        else if(syn_vld[2])
+            syn_select = 2;
+        else if(syn_vld[3])
+            syn_select = 3;
+        else
+            syn_select = 0;
+    end
 
     case(syn_select)
         0: begin

@@ -110,6 +110,7 @@ always_ff @(posedge clk) begin
                     last_idx    <= 0;
                     cur_idx     <= 0;
                     cur_syn_vld <= 0;
+                    syn_in_rdy  <= 1; // ready for more!
                 end
                 else begin
                     // keep iterating

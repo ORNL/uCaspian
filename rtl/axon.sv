@@ -9,6 +9,7 @@
 `define uCaspian_Axon_SV
 
 `include "dp_ram.sv"
+`include "find_set_bit.sv"
 
 module ucaspian_axon(
     input               clk,
@@ -133,6 +134,33 @@ always_ff @(posedge clk) begin
     end
 end
 
+// actvity tracking
+logic [15:0] activity;
+logic [15:0] activity_next;
+logic [15:0] activity_mask;
+logic  [3:0] activity_fb;
+logic        activity_none;
+
+always_ff @(posedge clk) begin
+    if(reset || clear_act || clear_config) begin
+        activity      <= 0;
+        activity_next <= 0;
+    end
+    else if(next_step) begin
+        activity      <= activity_next;
+        activity_next <= 0;
+    end
+    else if(delay_wr_en && delay_wr_data != 0) begin
+        activity_next[delay_wr_addr[7:4]] <= 1;
+    end
+end
+
+find_set_bit_16 detect_act_inst(
+    .in(activity & ~activity_mask),
+    .out(activity_fb),
+    .none_found(activity_none)
+);
+
 // shadow delay ram
 logic [7:0]  dly_addr_1;
 logic [7:0]  dly_addr_2;
@@ -192,6 +220,7 @@ end
 // Activity scan state
 logic [7:0] scan_idx;
 logic       scan_done;
+logic       scan_iter;
 
 // incoming -> process spike
 logic [7:0] incoming_addr;
@@ -210,8 +239,10 @@ always_ff @(posedge clk) begin
         incoming_spike <= 0;
         incoming_vld   <= 0;
         scan_done      <= 0;
+        scan_iter      <= 0;
         incoming_st_sp <= 0;
         st_cnt         <= 0;
+        activity_mask  <= 0;
     end
     // stalled spike
     if(incoming_st_sp) begin
@@ -248,14 +279,27 @@ always_ff @(posedge clk) begin
     else if(~scan_done &&
             ~(scan_idx == incoming_addr && incoming_spike) &&
             ~(scan_idx == active_addr && active_spike)) begin
-        incoming_addr  <= scan_idx;
-        incoming_spike <= 0;
-        incoming_vld   <= 1;
 
-        // Continue scan
-        scan_idx <= scan_idx + 1;
-        if(scan_idx == 255) begin
-            scan_done <= 1;
+        if(scan_iter) begin
+            scan_idx       <= scan_idx + 1;
+            incoming_addr  <= scan_idx;
+            incoming_spike <= 0;
+            incoming_vld   <= 1;
+            
+            if(scan_idx[3:0] == 4'b1111) begin
+                scan_iter <= 0;
+            end
+        end
+        else if(~activity_none) begin
+            scan_idx     <= {activity_fb, 4'b0000};
+            scan_iter    <= 1;
+            incoming_vld <= 0;
+
+            activity_mask[activity_fb] <= 1;
+        end
+        else begin
+            scan_done    <= 1;
+            incoming_vld <= 0;
         end
     end
     // Do nothing
@@ -301,6 +345,28 @@ always_ff @(posedge clk) begin
 end
 
 logic [7:0] clear_addr;
+logic active_addr_will_shift;
+
+always_comb begin
+    logic [3:0] a_pre = active_addr[7:4];
+
+    if(activity[a_pre]) begin
+        if(activity_mask[a_pre]) begin
+            if(scan_idx[7:4] == a_pre && scan_idx <= active_addr) begin
+                active_addr_will_shift = 1;
+            end
+            else begin
+                active_addr_will_shift = 0;
+            end
+        end
+        else begin
+            active_addr_will_shift = 1;
+        end
+    end
+    else begin
+        active_addr_will_shift = 0;
+    end
+end
 
 // Process Spike (config lookup, delay)
 always_ff @(posedge clk) begin
@@ -339,8 +405,9 @@ always_ff @(posedge clk) begin
             end
             else begin
                 // write delay & determine if this has been shifted already
-                if(active_addr <= last_scan_addr && scan_started) begin
-                    // this has already been shfited this timestep
+                //if(active_addr <= last_scan_addr && scan_started) begin
+                if(~active_addr_will_shift) begin
+                    // this has already been shfited this timestep / won't be shifted later
                     delay_wr_data <= delay_rd_data_fwd | (1 << (config_rd_data[23:20]-1));
                 end
                 else begin
@@ -410,7 +477,7 @@ end
 
 // STEP DONE logic
 always_ff @(posedge clk) begin
-    step_done <= scan_done && outgoing_rdy && ~outgoing_vld && ~incoming_vld && ~axon_vld;
+    step_done <= scan_done && outgoing_rdy && ~outgoing_vld && ~incoming_vld && ~axon_vld && ~incoming_st_sp;
 end
 
 endmodule

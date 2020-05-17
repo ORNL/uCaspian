@@ -95,12 +95,16 @@ end
 logic [9:0] syn_addr_reg;
 
 logic [15:0] scfg_temp;
+logic [7:0]  dend_addr_temp;
+logic [7:0]  dend_ch_temp;
 always_comb begin
-    scfg_temp = synapse_cfg[syn_addr_reg];
+    scfg_temp      = synapse_cfg[syn_addr_reg];
+    dend_ch_temp   = scfg_temp[15:8];
+    dend_addr_temp = scfg_temp[7:0];
 end
 
 always_comb begin
-    syn_rdy = dend_rdy;
+    syn_rdy = dend_rdy || (~dend_vld && ~next_syn);
 end
 
 logic next_syn;
@@ -120,9 +124,10 @@ always_ff @(posedge clk) begin
         end
 
         if(next_syn) begin
-            dend_addr   <= scfg_temp[7:0];
-            dend_charge <= scfg_temp[15:8];
+            dend_addr   <= dend_addr_temp;
+            dend_charge <= dend_ch_temp;
             dend_vld    <= 1;
+            next_syn    <= 0;
         end
         
         if(syn_rdy && syn_vld) begin
