@@ -99,70 +99,44 @@ always_comb begin
     scfg_temp = synapse_cfg[syn_addr_reg];
 end
 
+always_comb begin
+    syn_rdy = dend_rdy;
+end
+
+logic next_syn;
 always_ff @(posedge clk) begin
-    // default to keep the same state
-    synapse_state <= synapse_state;
-    step_done     <= 0;
 
-    case(synapse_state)
-        SYN_IDLE: begin
-            dend_vld  <= 0;
-            syn_rdy   <= 0;
-            step_done <= 1;
-
-            if(enable && !cfg_enable) begin
-                // read in a new fire
-                syn_rdy       <= 1;
-                if(syn_rdy && syn_vld) begin
-                    step_done     <= 0;
-                    synapse_state <= SYN_ACTIVE;
-                    syn_addr_reg  <= syn_addr;
-                    syn_rdy       <= 0;
-                end
-            end
-            else begin
-                synapse_state <= SYN_DISABLE;
-            end
+    if(reset || clear_act || clear_config) begin
+        syn_addr_reg <= 0;
+        dend_addr    <= 0;
+        dend_charge  <= 0;
+        dend_vld     <= 0;
+        next_syn     <= 0;
+    end
+    else if(enable) begin
+        if(dend_rdy && dend_vld) begin
+            dend_vld <= 0;
+            next_syn <= 0;
         end
-        SYN_ACTIVE: begin
-            // look up weight & target to pass to dendrite
+
+        if(next_syn) begin
             dend_addr   <= scfg_temp[7:0];
             dend_charge <= scfg_temp[15:8];
             dend_vld    <= 1;
-            syn_rdy     <= 0;
-
-            // wait for handshake signal
-            if(dend_rdy && dend_vld) begin
-                synapse_state <= SYN_IDLE;
-                dend_vld      <= 0;
-            end
         end
-        SYN_BLOCK_ON_DENDRITE: begin
-            // not a thing right now
-            synapse_state <= SYN_IDLE;
-            syn_rdy       <= 0;
-            dend_vld      <= 0;
+        
+        if(syn_rdy && syn_vld) begin
+            syn_addr_reg <= syn_addr;
+            next_syn     <= 1;
         end
-        SYN_DISABLE: begin
-            dend_vld <= 0;
-            syn_rdy  <= 0;
-
-            if(enable && !cfg_enable) begin
-                synapse_state <= SYN_IDLE;
-            end
+        else if(dend_vld && ~dend_rdy) begin
+            next_syn     <= 0;
         end
-    endcase
-
-    // reset everything
-    if(reset) begin
-        synapse_state <= SYN_IDLE;
-        syn_rdy       <= 0;
-        dend_vld      <= 0;
-        dend_addr     <= 0;
-        dend_charge   <= 0;
-        syn_addr_reg  <= 0;
-        step_done     <= 0;
     end
+end
+
+always_ff @(posedge clk) begin
+    step_done <= ~dend_vld && ~syn_vld && ~next_syn;
 end
 
 endmodule
