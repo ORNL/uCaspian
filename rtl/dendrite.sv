@@ -203,16 +203,26 @@ logic accumulate_done;
 logic signed [8:0] incoming_charge;
 logic incoming_rd_dly;
 logic [7:0] incoming_addr_dly;
-logic [7:0] last_wr_addr;
-logic       last_wr_flag;
 logic signed [15:0] incoming_charge_dly;
+
+logic  [7:0] last1_wr_addr;
+logic        last1_wr_flag;
+
+logic  [7:0] last2_wr_addr;
+logic        last2_wr_flag;
+logic [15:0] last2_data;
+
 always_ff @(posedge clk) begin
     if(!next_step && !clr_act_vec)
         dend_rdy <= 1;
 
     if(next_step) begin
-        activity_in  <= 0;
-        last_wr_flag <= 0;
+        activity_in   <= 0;
+        last1_wr_addr <= 0;
+        last1_wr_flag <= 0;
+        last2_wr_addr <= 0;
+        last2_wr_flag <= 0;
+        last2_data    <= 0;
     end
 
     if(dend_rdy && dend_vld && ~clear_act && ~clear_config) begin
@@ -229,23 +239,38 @@ always_ff @(posedge clk) begin
     incoming_charge_dly <= {{7{incoming_charge[8]}}, incoming_charge};
     incoming_wr_en      <= 0;
 
-    if(clear_act || clear_config) begin
+    if(reset || clear_act || clear_config) begin
         incoming_wr_addr <= flush_idx;
         incoming_wr_data <= 0;
         incoming_wr_en   <= 1;
-        last_wr_flag     <= 0;
+        
+        last1_wr_addr    <= 0;
+        last1_wr_flag    <= 0;
+
+        last2_wr_addr    <= 0;
+        last2_wr_flag    <= 0;
+        last2_data       <= 0;
     end
     else if(incoming_rd_dly) begin
-        incoming_wr_addr <= incoming_addr_dly; // incoming_rd_addr;
-        incoming_wr_en   <= 1;
         activity_in[incoming_addr_dly[7:4]] <= 1;
 
-        last_wr_addr     <= incoming_addr_dly;
-        last_wr_flag     <= 1;
+        incoming_wr_addr <= incoming_addr_dly; // incoming_rd_addr;
+        incoming_wr_en   <= 1;
 
-        if(last_wr_flag && (last_wr_addr == incoming_addr_dly)) begin
+        last1_wr_addr     <= incoming_addr_dly;
+        last1_wr_flag     <= 1;
+
+        last2_wr_addr     <= last1_wr_addr;
+        last2_wr_flag     <= last1_wr_flag;
+        last2_data        <= incoming_wr_data;
+
+        if(last1_wr_flag && (last1_wr_addr == incoming_addr_dly)) begin
             // write after write
             incoming_wr_data <= $signed(incoming_wr_data) + $signed(incoming_charge_dly);
+        end
+        else if(last2_wr_flag && (last2_wr_addr == incoming_addr_dly)) begin
+            // write after write
+            incoming_wr_data <= $signed(last2_data) + $signed(incoming_charge_dly);
         end
         else begin
             // normal case
