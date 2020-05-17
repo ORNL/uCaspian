@@ -9,7 +9,6 @@
 `define uCaspian_Axon_SV
 
 `include "dp_ram.sv"
-//`include "find_set_bit.sv"
 
 module ucaspian_axon(
     input               clk,
@@ -134,6 +133,62 @@ always_ff @(posedge clk) begin
     end
 end
 
+// shadow delay ram
+logic [7:0]  dly_addr_1;
+logic [7:0]  dly_addr_2;
+logic [15:0] dly_data_1;
+logic [15:0] dly_data_2;
+logic [1:0]  dly_cn;
+always_ff @(posedge clk) begin
+    if(reset || clear_act || clear_config || next_step) begin
+        dly_addr_1 <= 0;
+        dly_data_1 <= 0;
+        dly_addr_2 <= 0;
+        dly_data_2 <= 0;
+        dly_cn     <= 0;
+    end
+    else if(delay_wr_en) begin
+        dly_addr_1 <= delay_wr_addr;
+        dly_data_1 <= delay_wr_data;
+        dly_addr_2 <= dly_addr_1;
+        dly_data_2 <= dly_data_1;
+        if(dly_cn < 3) dly_cn <= dly_cn + 1;
+    end
+end
+
+logic [15:0] delay_rd_data_1;
+logic        delay_do_fwd;
+always_ff @(posedge clk) begin
+    if(reset || clear_act || clear_config || next_step) begin
+        delay_rd_data_1 <= 0;
+        delay_do_fwd    <= 0;
+    end
+    if(delay_rd_en) begin
+        if(delay_rd_addr == delay_wr_addr && delay_wr_en) begin
+            delay_rd_data_1 <= delay_wr_data;
+            delay_do_fwd    <= 1;
+        end
+        if(delay_rd_addr == dly_addr_1 && dly_cn > 0) begin
+            delay_rd_data_1 <= dly_data_1;
+            delay_do_fwd    <= 1;
+        end
+        else if(delay_rd_addr == dly_addr_2 && dly_cn > 1) begin
+            delay_rd_data_1 <= dly_data_2;
+            delay_do_fwd    <= 1;
+        end
+        else begin
+            delay_do_fwd    <= 0;
+        end
+    end
+end
+
+// forward written value
+logic [15:0] delay_rd_data_fwd;
+always_comb begin
+    if(delay_do_fwd) delay_rd_data_fwd = delay_rd_data_1;
+    else delay_rd_data_fwd = delay_rd_data;
+end
+
 // Activity scan state
 logic [7:0] scan_idx;
 logic       scan_done;
@@ -144,6 +199,9 @@ logic       incoming_spike; // 0 = activity scan, 1 = new spike
 logic       incoming_vld;
 logic       incoming_rdy;
 
+logic       incoming_st_sp; // stall incoming spike
+logic [3:0] st_cnt;
+
 // Incoming fires and Activity Scan
 always_ff @(posedge clk) begin
     // reset state
@@ -151,7 +209,20 @@ always_ff @(posedge clk) begin
         incoming_addr  <= 0;
         incoming_spike <= 0;
         incoming_vld   <= 0;
-        scan_done      <= 0; 
+        scan_done      <= 0;
+        incoming_st_sp <= 0;
+        st_cnt         <= 0;
+    end
+    // stalled spike
+    if(incoming_st_sp) begin
+        if(incoming_addr != active_addr || (delay_wr_en && st_cnt > 1) || st_cnt > 7) begin
+            incoming_spike <= 1;
+            incoming_vld   <= 1;
+            incoming_st_sp <= 0;
+            st_cnt         <= 0;
+        end
+
+        if(st_cnt != 15) st_cnt <= st_cnt + 1;
     end
     // wait if we tried to send
     else if(incoming_vld && ~incoming_rdy) begin
@@ -162,11 +233,21 @@ always_ff @(posedge clk) begin
     // Priority: Get incoming fires
     else if(axon_vld && axon_rdy) begin
         incoming_addr  <= axon_addr;
-        incoming_spike <= 1;
-        incoming_vld   <= 1;
+
+        if(axon_addr == incoming_addr || axon_addr == active_addr) begin
+            incoming_st_sp <= 1;
+            incoming_vld   <= 0;
+            st_cnt         <= 0;
+        end
+        else begin
+            incoming_spike <= 1;
+            incoming_vld   <= 1;
+        end
     end
     // Activity scan
-    else if(~scan_done) begin
+    else if(~scan_done &&
+            ~(scan_idx == incoming_addr && incoming_spike) &&
+            ~(scan_idx == active_addr && active_spike)) begin
         incoming_addr  <= scan_idx;
         incoming_spike <= 0;
         incoming_vld   <= 1;
@@ -179,7 +260,7 @@ always_ff @(posedge clk) begin
     end
     // Do nothing
     else begin
-        incoming_addr  <= 0;
+        //incoming_addr  <= 0;
         incoming_spike <= 0;
         incoming_vld   <= 0; 
     end
@@ -204,8 +285,6 @@ logic        outgoing_vld;
 
 // Load active address
 always_ff @(posedge clk) begin
-    active_todo <= 0;
-
     // accept incoming data
     if(incoming_rdy && incoming_vld) begin
         active_addr  <= incoming_addr;
@@ -214,6 +293,10 @@ always_ff @(posedge clk) begin
 
         last_active_addr  <= active_addr;
         last_active_spike <= active_spike;
+    end
+    else if(incoming_rdy) begin
+        active_todo  <= 0;
+        active_spike <= 0;
     end
 end
 
@@ -246,7 +329,7 @@ always_ff @(posedge clk) begin
     end
 
     // process spike
-    if(active_todo) begin
+    if(incoming_rdy && active_todo) begin
         if(active_spike) begin
             if(config_rd_data[23:20] == 0) begin
                 // No delay
@@ -256,17 +339,13 @@ always_ff @(posedge clk) begin
             end
             else begin
                 // write delay & determine if this has been shifted already
-                if(active_addr < last_scan_addr && scan_started) begin
+                if(active_addr <= last_scan_addr && scan_started) begin
                     // this has already been shfited this timestep
-                    delay_wr_data <= delay_rd_data | (1 << (config_rd_data[23:20]-1));
-                end
-                else if(active_addr == last_scan_addr && scan_started) begin
-                    // this has already been shfited this timestep
-                    delay_wr_data <= delay_wr_data | (1 << (config_rd_data[23:20]-1));
+                    delay_wr_data <= delay_rd_data_fwd | (1 << (config_rd_data[23:20]-1));
                 end
                 else begin
                     // this will shifted later this timestep
-                    delay_wr_data <= delay_rd_data | (1 << (config_rd_data[23:20]));
+                    delay_wr_data <= delay_rd_data_fwd | (1 << (config_rd_data[23:20]));
                 end
 
                 delay_wr_addr <= active_addr;
@@ -292,17 +371,17 @@ always_ff @(posedge clk) begin
             end
             else begin
                 // send for output
-                if(delay_rd_data[0] == 1) begin
+                if(delay_rd_data_fwd[0] == 1) begin
                     outgoing_addr   <= active_addr;
                     outgoing_config <= config_rd_data[19:0];
                     outgoing_vld    <= 1;
                 end
-                delay_wr_data <= delay_rd_data >> 1;
+                delay_wr_data <= delay_rd_data_fwd >> 1;
             end
         end
     end
-    
 end
+
 
 always_comb config_rd_addr = incoming_addr;
 always_comb delay_rd_addr  = incoming_addr;
@@ -311,9 +390,10 @@ always_comb config_rd_en = incoming_rdy && incoming_vld;
 always_comb delay_rd_en  = incoming_rdy && incoming_vld;
 
 // blocking all the way back
-always_comb outgoing_rdy = syn_rdy && !(syn_vld && syn_start != syn_end);
+//always_comb outgoing_rdy = syn_rdy && !(syn_vld && syn_start != syn_end);
+always_comb outgoing_rdy = syn_rdy && ~syn_vld;
 always_comb incoming_rdy = outgoing_rdy;
-always_comb axon_rdy     = outgoing_rdy;
+always_comb axon_rdy     = outgoing_rdy && ~incoming_st_sp;
 
 // Output synapse ranges
 always_ff @(posedge clk) begin
