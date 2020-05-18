@@ -126,6 +126,8 @@ assign charge_rd_en = ram_rd_en;
 assign config_rd_en = ram_rd_en;
 
 logic block;
+logic pre_block;
+always_comb pre_block = (axon_vld && ~axon_rdy) || (output_vld && ~output_rdy);
 
 assign neuron_rdy = ~block;
 
@@ -310,8 +312,6 @@ always_ff @(posedge clk) begin
     end
 end
 
-logic pre_block;
-always_comb pre_block = (axon_vld && ~axon_rdy) || (output_vld && ~output_rdy);
 
 logic does_fire_w;
 always_comb begin
@@ -342,7 +342,8 @@ always_ff @(posedge clk) begin
         axon_vld    <= 0;
         output_vld  <= 0;
     end
-    else if(~pre_block && ~block && ~last_block && does_fire_w) begin
+    //else if(~pre_block && ~block && ~last_block && does_fire_w) begin
+    else if(~pre_block && ~block && does_fire_w) begin
         axon_addr <= fire_addr;
         axon_vld  <= 1;
 
@@ -351,53 +352,6 @@ always_ff @(posedge clk) begin
             output_vld  <= 1;
         end
     end
-
-/*
-    axon_vld   <= 0;
-    output_vld <= 0;
-
-    if(reset) begin
-        block_reg <= 0;
-    end
-    else if(clear_config || clear_act) begin
-        // block <= 1;
-        block_reg <= 0;
-    end
-    else if((axon_vld && ~axon_rdy) || (output_vld && ~output_rdy)) begin
-        block_reg  <= 1;
-        axon_vld   <= axon_vld && ~axon_rdy;
-        output_vld <= output_vld && ~output_rdy;
-    end
-    //else if(does_fire) begin
-    else if(does_fire_w) begin
-        output_addr <= fire_addr;
-        axon_addr   <= fire_addr;
-        // we sent the fire, drop vld back low
-        if(axon_vld) begin
-            axon_vld    <= 0;
-            output_vld  <= 0;
-        end
-        // we can send the fire, so lets do it
-        else if(output_en && output_rdy && axon_rdy) begin
-            output_vld  <= 1;
-            axon_vld    <= 1;
-            block_reg   <= 0;
-        end
-        // not an output neuron, so it just needs to go to the axon
-        else if(~output_en && axon_rdy) begin
-            axon_addr <= fire_addr;
-            axon_vld  <= 1;
-            block_reg <= 0;
-        end
-        // unable to send the fire, block the pipeline
-        else begin
-            block_reg <= 1;
-        end
-    end
-    else begin
-        block_reg <= 0;
-    end
-*/
 end
 
 // indicate when we are working
