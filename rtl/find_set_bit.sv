@@ -51,6 +51,29 @@ module find_set_bit_16(
 
 always_comb begin
     none_found = 0;
+
+    if(in[0])  out =  0;
+    else if(in[1])  out =  1;
+    else if(in[2])  out =  2;
+    else if(in[3])  out =  3;
+    else if(in[4])  out =  4;
+    else if(in[5])  out =  5;
+    else if(in[6])  out =  6;
+    else if(in[7])  out =  7;
+    else if(in[8])  out =  8;
+    else if(in[9])  out =  9;
+    else if(in[10]) out = 10;
+    else if(in[11]) out = 11;
+    else if(in[12]) out = 12;
+    else if(in[13]) out = 13;
+    else if(in[14]) out = 14;
+    else if(in[15]) out = 15;
+    else begin
+        out = 0;
+        none_found = 1;
+    end
+
+    /*
     if(in[15]) out = 15;
     else if(in[14]) out = 14;
     else if(in[13]) out = 13;
@@ -71,6 +94,7 @@ always_comb begin
         out = 0;
         none_found = 1;
     end
+    */
 end
 
 endmodule

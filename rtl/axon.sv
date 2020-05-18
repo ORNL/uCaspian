@@ -354,7 +354,6 @@ always_ff @(posedge clk) begin
     end
 end
 
-logic [7:0] clear_addr;
 logic active_addr_will_shift;
 logic [3:0] a_pre;
 
@@ -378,6 +377,8 @@ always_comb begin
         active_addr_will_shift = 0;
     end
 end
+
+logic [7:0] clear_addr;
 
 // Process Spike (config lookup, delay)
 always_ff @(posedge clk) begin
@@ -420,6 +421,7 @@ always_ff @(posedge clk) begin
                 end
                 // write delay & determine if this has been shifted already
                 else if(~active_addr_will_shift) begin
+
                     // this has already been shfited this timestep / won't be shifted later
                     delay_wr_data <= delay_rd_data_fwd | (1 << (config_rd_data[23:20]-1));
                 end
