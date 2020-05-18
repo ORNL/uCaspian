@@ -406,7 +406,6 @@ always_ff @(posedge clk) begin
             end
             else begin
                 // write delay & determine if this has been shifted already
-                //if(active_addr <= last_scan_addr && scan_started) begin
                 if(~active_addr_will_shift) begin
                     // this has already been shfited this timestep / won't be shifted later
                     delay_wr_data <= delay_rd_data_fwd | (1 << (config_rd_data[23:20]-1));
@@ -428,24 +427,13 @@ always_ff @(posedge clk) begin
             delay_wr_addr <= active_addr;
             delay_wr_en   <= 1;
 
-            if(active_addr == last_active_addr) begin
-                // send for output
-                if(delay_wr_data[0] == 1) begin
-                    outgoing_addr   <= active_addr;
-                    outgoing_config <= config_rd_data[19:0];
-                    outgoing_vld    <= 1;
-                end
-                delay_wr_data <= delay_wr_data >> 1;
+            // send for output
+            if(delay_rd_data_fwd[0] == 1) begin
+                outgoing_addr   <= active_addr;
+                outgoing_config <= config_rd_data[19:0];
+                outgoing_vld    <= 1;
             end
-            else begin
-                // send for output
-                if(delay_rd_data_fwd[0] == 1) begin
-                    outgoing_addr   <= active_addr;
-                    outgoing_config <= config_rd_data[19:0];
-                    outgoing_vld    <= 1;
-                end
-                delay_wr_data <= delay_rd_data_fwd >> 1;
-            end
+            delay_wr_data <= delay_rd_data_fwd >> 1;
         end
     end
 end
@@ -458,14 +446,6 @@ always_comb config_rd_en = incoming_rdy && incoming_vld;
 always_comb delay_rd_en  = incoming_rdy && incoming_vld;
 
 // blocking all the way back
-//always_comb outgoing_rdy = syn_rdy && !(syn_vld && syn_start != syn_end);
-//always_comb outgoing_rdy = syn_rdy;
-/*
-always_comb outgoing_rdy = syn_rdy && ~syn_vld;
-always_comb incoming_rdy = outgoing_rdy;
-always_comb axon_rdy     = outgoing_rdy && ~incoming_st_sp;
-*/
-
 always_comb outgoing_rdy = ~syn_vld;
 always_comb incoming_rdy = ~syn_vld;
 always_comb axon_rdy     = ~syn_vld && ~incoming_st_sp;
