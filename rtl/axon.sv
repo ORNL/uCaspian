@@ -459,13 +459,20 @@ always_comb delay_rd_en  = incoming_rdy && incoming_vld;
 
 // blocking all the way back
 //always_comb outgoing_rdy = syn_rdy && !(syn_vld && syn_start != syn_end);
+//always_comb outgoing_rdy = syn_rdy;
+/*
 always_comb outgoing_rdy = syn_rdy && ~syn_vld;
 always_comb incoming_rdy = outgoing_rdy;
 always_comb axon_rdy     = outgoing_rdy && ~incoming_st_sp;
+*/
+
+always_comb outgoing_rdy = ~syn_vld;
+always_comb incoming_rdy = ~syn_vld;
+always_comb axon_rdy     = ~syn_vld && ~incoming_st_sp;
 
 // Output synapse ranges
 always_ff @(posedge clk) begin
-    if(syn_vld && syn_rdy) syn_vld <= 0;
+    if(reset || clear_act || clear_config || (syn_vld && syn_rdy)) syn_vld <= 0;
     
     if(outgoing_rdy && outgoing_vld) begin
         if(outgoing_config[7:0] != 0) begin
