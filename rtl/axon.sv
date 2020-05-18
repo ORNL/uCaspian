@@ -210,6 +210,16 @@ always_ff @(posedge clk) begin
     end
 end
 
+logic delay_wr_flag;
+always_ff @(posedge clk) begin
+    if(reset || clear_act || clear_config || next_step) begin
+        delay_wr_flag <= 0;
+    end
+    else if(delay_wr_en) begin
+        delay_wr_flag <= 1;
+    end
+end
+
 // forward written value
 logic [15:0] delay_rd_data_fwd;
 always_comb begin
@@ -405,8 +415,11 @@ always_ff @(posedge clk) begin
                 outgoing_vld    <= 1;
             end
             else begin
+                if(delay_wr_addr == active_addr && delay_wr_flag) begin
+                    delay_wr_data <= delay_wr_data | (1 << (config_rd_data[23:20]-1));
+                end
                 // write delay & determine if this has been shifted already
-                if(~active_addr_will_shift) begin
+                else if(~active_addr_will_shift) begin
                     // this has already been shfited this timestep / won't be shifted later
                     delay_wr_data <= delay_rd_data_fwd | (1 << (config_rd_data[23:20]-1));
                 end
