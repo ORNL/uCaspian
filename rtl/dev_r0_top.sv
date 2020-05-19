@@ -62,10 +62,14 @@ module top(
 
     axis_ft245 
     #(
-        .WR_SETUP_CYCLES(3),
-        .WR_PULSE_CYCLES(7),
-        .RD_PULSE_CYCLES(8),
-        .RD_WAIT_CYCLES(5)
+        .WR_SETUP_CYCLES(2),
+        .WR_PULSE_CYCLES(3),
+        .RD_PULSE_CYCLES(3),
+        .RD_WAIT_CYCLES(2)
+        //.WR_SETUP_CYCLES(3),
+        //.WR_PULSE_CYCLES(7),
+        //.RD_PULSE_CYCLES(8),
+        //.RD_WAIT_CYCLES(5)
     )
     ft245_inst
     (
@@ -119,7 +123,7 @@ module top(
     
     axis_fifo 
     #(
-        .DEPTH(512),
+        .DEPTH(1024), // was 512
         .LAST_ENABLE(0),
         .USER_ENABLE(0)
     ) 
@@ -141,7 +145,7 @@ module top(
 
     axis_fifo 
     #(
-        .DEPTH(512),
+        .DEPTH(1024), // was 512
         .LAST_ENABLE(0),
         .USER_ENABLE(0)
     ) 
