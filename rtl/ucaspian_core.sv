@@ -89,10 +89,10 @@ logic step_done_hold;
 logic [31:0] target_time;
 logic [31:0] core_time;
 
-// PLACEHOLDER: network time counter
+// Network time counter
 always_ff @(posedge clk) begin
     if(reset || clear_act || clear_config) begin
-        core_time   <= 0;
+        core_time      <= 0;
         next_time_step <= 0;
         time_remaining <= 0;
     end
@@ -101,7 +101,7 @@ always_ff @(posedge clk) begin
         if(step_done && step_done_hold && time_remaining && !next_time_step) begin
             next_time_step <= 1;
             time_update    <= 1;
-            core_time   <= core_time + 1;
+            core_time      <= core_time + 1;
         end 
         else if(time_sent) begin
             time_update    <= 0;
@@ -123,7 +123,7 @@ end
 
 always_comb time_current = core_time;
 
-// PLACEHOLDER: target time calculation
+// Target time calculation
 always_ff @(posedge clk) begin
     time_target_ack <= 0;
 
@@ -136,21 +136,21 @@ always_ff @(posedge clk) begin
     end
 end
 
-// PLACEHOLDER: indicate if the core is doing work
-always_comb core_active = !clear_act && !clear_config && !reset && time_remaining;
+// Indicate if the core is doing work
+always_comb core_active = !clear_act && !clear_config && !reset && (time_remaining || (~time_remaining && ~step_done_hold));
 
 // Synapses
-logic  [9:0] syn_addr [3:0];
-logic        syn_vld [3:0];
-logic        syn_rdy [3:0];
+logic [9:0] syn_addr [3:0];
+logic       syn_vld  [3:0];
+logic       syn_rdy  [3:0];
 
-logic  [7:0] syn_to_dend_addr [3:0];
-logic  [7:0] syn_to_dend_charge [3:0];
-logic        syn_to_dend_vld [3:0];
-logic        syn_to_dend_rdy [3:0];
+logic [7:0] syn_to_dend_addr   [3:0];
+logic [7:0] syn_to_dend_charge [3:0];
+logic       syn_to_dend_vld    [3:0];
+logic       syn_to_dend_rdy    [3:0];
 
-logic        syn_enable [3:0];
-logic        syn_cfg_enable [3:0];
+logic       syn_enable     [3:0];
+logic       syn_cfg_enable [3:0];
 
 // Determine synapse config enable signals
 always_comb begin
@@ -453,18 +453,83 @@ fire_dispatch fire_dispatch_inst(
     .syn_addr_3(syn_addr[3])
 );
 
-// PLACEHOLDER: metric logic
+// Metrics -- TODO: make this into a better module
+
+logic [31:0] metric_acc_cnt;
+logic [15:0] metric_fire_cnt;
+logic [31:0] metric_clk_cnt;
+
+logic [7:0]  metric_lst_addr;
+logic        metric_lst_clear;
+
 logic metric_send_reg;
 always @(posedge clk) begin
     metric_send_reg <= 0;
 
+    // accumulate count
+    if(reset || clear_act || clear_config) begin
+        metric_acc_cnt <= 0;
+    end
+    else if(dend_rdy && dend_vld) begin
+        metric_acc_cnt <= metric_acc_cnt + 1;
+    end
+
+    // fire count
+    if(reset || clear_act || clear_config) begin
+        metric_fire_cnt <= 0;
+    end
+    else if(axon_rdy && axon_vld) begin
+        metric_fire_cnt <= metric_fire_cnt + 1;
+    end
+
+    // active clock cycle count
+    if(reset || clear_act || clear_config) begin
+        metric_clk_cnt <= 0;
+    end
+    else if(core_active) begin
+        metric_clk_cnt <= metric_clk_cnt + 1;
+    end
+
     if(reset) begin
-        metric_value    <= 0;
-        metric_send_reg <= 0;
+        metric_value     <= 0;
+        metric_send_reg  <= 0;
+        metric_lst_addr  <= 0;
+        metric_lst_clear <= 0;
     end
     else if(metric_read) begin
         metric_value    <= metric_addr + 5;
-        metric_send_reg <= 1;
+
+        // TODO: clear after read
+        case(metric_addr)
+            1:  metric_value <= metric_fire_cnt[15:8]; 
+            2:  metric_value <= metric_fire_cnt[7:0]; 
+
+            3:  metric_value <= metric_acc_cnt[31:24];
+            4:  metric_value <= metric_acc_cnt[23:16];
+            5:  metric_value <= metric_acc_cnt[15:8];
+            6:  metric_value <= metric_acc_cnt[7:0];
+
+            7:  metric_value <= metric_clk_cnt[31:24];
+            8:  metric_value <= metric_clk_cnt[23:16];
+            9:  metric_value <= metric_clk_cnt[15:8];
+            10: metric_value <= metric_clk_cnt[7:0];
+
+            default: metric_value <= 0;
+        endcase
+
+        metric_send_reg  <= 1;
+        metric_lst_addr  <= metric_addr;
+        metric_lst_clear <= 1;
+    end
+    else if(metric_lst_clear) begin
+
+        case(metric_lst_addr)
+            2:  metric_fire_cnt <= 0;
+            6:  metric_acc_cnt  <= 0;
+            10: metric_clk_cnt  <= 0;
+        endcase
+
+        metric_lst_clear <= 0;
     end
 end
 
