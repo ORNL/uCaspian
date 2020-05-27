@@ -45,11 +45,10 @@ module dendrite_mux(
 localparam [2:0] IN_PORT = 4;
 localparam [2:0] RST_PORT = 5;
 
-// TODO
-
 logic syn_rdy [4:0];
 logic syn_vld [4:0];
 
+// Map ready & valid signals
 always_comb begin
     syn_dend_rdy_0 = syn_rdy[0];
     syn_dend_rdy_1 = syn_rdy[1];
@@ -66,28 +65,6 @@ end
 
 logic [2:0] syn_select;
 
-/*
-always_ff @(posedge clk) begin
-    if(reset) begin
-        syn_select <= RST_PORT;
-    end
-    else begin
-        if(syn_vld[IN_PORT])
-            syn_select <= IN_PORT;
-        else if(syn_vld[0])
-            syn_select <= 0;
-        else if(syn_vld[1])
-            syn_select <= 1;
-        else if(syn_vld[2])
-            syn_select <= 2;
-        else if(syn_vld[3])
-            syn_select <= 3;
-        else
-            syn_select <= 0;
-    end
-end
-*/
-
 always_comb begin
     syn_rdy[0] = 0;
     syn_rdy[1] = 0;
@@ -99,6 +76,8 @@ always_comb begin
         syn_select = RST_PORT;
     end
     else begin
+        // Fixed priority arbitration scheme
+        //  -- this could be changed in the future if necessary
         if(syn_vld[IN_PORT])
             syn_select = IN_PORT;
         else if(syn_vld[0])
@@ -113,6 +92,8 @@ always_comb begin
             syn_select = 0;
     end
 
+    // Mux based on selected port from fixed priority scheme
+    //  -- currently only support single/atomic transaction and is not stateful
     case(syn_select)
         0: begin
             dend_addr   = syn_dend_addr_0;

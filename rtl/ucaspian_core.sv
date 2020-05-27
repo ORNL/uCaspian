@@ -73,7 +73,8 @@ module ucaspian_core(
 wire config_synapse = (config_byte < 7) && config_type;
 wire config_neuron  = (config_byte < 7) && !config_type;
 
-// TODO
+// Don't require an ack because there's no chance of blocking.
+// Note - This must be updated if programming packets change.
 always_ff @(posedge clk) begin
     if(config_synapse && config_byte >= 3)
         config_done <= 1;
@@ -137,7 +138,16 @@ always_ff @(posedge clk) begin
 end
 
 // Indicate if the core is doing work
-always_comb core_active = !clear_act && !clear_config && !reset && (time_remaining || (~time_remaining && ~step_done_hold));
+always_comb begin
+    core_active = ~reset && ~clear_act && ~clear_config &&
+        (time_remaining || (~time_remaining && ~step_done_hold) || input_fire_waiting);
+end
+
+logic [1:0] core_active_reg;
+always_ff @(posedge clk) begin
+    if(reset) core_active_reg <= 0;
+    else core_active_reg <= {core_active_reg[0], core_active};
+end
 
 // Synapses
 logic [9:0] syn_addr [3:0];
@@ -221,12 +231,13 @@ logic [7:0] dend_in_addr;
 logic [7:0] dend_in_charge;
 logic dend_in_rdy, dend_in_vld;
 
-// TODO
+// Input charge handling
+// Accepts address & charge from a packet and transfers them to the dendrite
 always_ff @(posedge clk) begin
     input_fire_ack <= 0;
     dend_in_vld    <= 0;
 
-    if(clear_act || clear_config) begin
+    if(reset || clear_act || clear_config) begin
         dend_in_addr   <= 0;
         dend_in_charge <= 0;
         dend_in_vld    <= 0;
@@ -235,7 +246,7 @@ always_ff @(posedge clk) begin
         dend_in_addr   <= input_fire_addr;
         dend_in_charge <= input_fire_value;
         dend_in_vld    <= 1;
-
+        // TODO: Should the ack be decoupled from the dendrite flow control?
         if(dend_in_vld && dend_in_rdy) begin
             dend_in_vld    <= 0;
             input_fire_ack <= 1;
@@ -295,6 +306,7 @@ logic neuron_rdy, neuron_vld;
 logic dendrite_step_done;
 logic dendrite_clear_done;
 logic dendrite_enable;
+
 always_comb dendrite_enable = ~clear_act && ~clear_config;
 
 ucaspian_dendrite dendrite_inst(
@@ -328,7 +340,10 @@ logic neuron_output_rdy, neuron_output_vld;
 
 logic neuron_clear_done;
 logic neuron_step_done;
-logic neuron_enable = ~clear_act && ~clear_config;
+logic neuron_enable;
+
+always_comb neuron_enable = ~clear_act && ~clear_config;
+
 ucaspian_neuron neuron_inst(
     .clk(clk),
     .reset(reset),
@@ -389,8 +404,10 @@ logic axon_syn_rdy, axon_syn_vld;
 
 logic axon_clear_done;
 logic axon_step_done;
-logic axon_enable; // TODO
+logic axon_enable;
+
 always_comb axon_enable = !clear_act && !clear_config;
+
 ucaspian_axon axon_inst(
     .clk(clk),
     .reset(reset),
@@ -423,7 +440,7 @@ logic fd_reset;
 logic fd_enable;
 always_comb begin
     fd_reset = reset || clear_act || clear_config;
-    fd_enable = !fd_reset;
+    fd_enable = ~fd_reset;
 end
 fire_dispatch fire_dispatch_inst(
     .clk(clk),
@@ -455,9 +472,9 @@ fire_dispatch fire_dispatch_inst(
 
 // Metrics -- TODO: make this into a better module
 
-logic [31:0] metric_acc_cnt;
-logic [15:0] metric_fire_cnt;
-logic [31:0] metric_clk_cnt;
+logic [31:0] metric_acc_cnt; // accumualtions / synops
+logic [24:0] metric_spk_cnt; // spikes
+logic [31:0] metric_clk_cnt; // active clock cycles
 
 logic [7:0]  metric_lst_addr;
 logic        metric_lst_clear;
@@ -476,17 +493,17 @@ always @(posedge clk) begin
 
     // fire count
     if(reset || clear_act || clear_config) begin
-        metric_fire_cnt <= 0;
+        metric_spk_cnt <= 0;
     end
     else if(axon_rdy && axon_vld) begin
-        metric_fire_cnt <= metric_fire_cnt + 1;
+        metric_spk_cnt <= metric_spk_cnt + 1;
     end
 
     // active clock cycle count
     if(reset || clear_act || clear_config) begin
         metric_clk_cnt <= 0;
     end
-    else if(core_active) begin
+    else if(core_active || core_active_reg[0] || core_active_reg[1]) begin
         metric_clk_cnt <= metric_clk_cnt + 1;
     end
 
@@ -497,23 +514,27 @@ always @(posedge clk) begin
         metric_lst_clear <= 0;
     end
     else if(metric_read) begin
-        metric_value    <= metric_addr + 5;
-
-        // TODO: clear after read
         case(metric_addr)
-            1:  metric_value <= metric_fire_cnt[15:8]; 
-            2:  metric_value <= metric_fire_cnt[7:0]; 
 
-            3:  metric_value <= metric_acc_cnt[31:24];
-            4:  metric_value <= metric_acc_cnt[23:16];
-            5:  metric_value <= metric_acc_cnt[15:8];
-            6:  metric_value <= metric_acc_cnt[7:0];
+            // Spike Count
+            1:  metric_value <= 0; // only 24-bits for now with space to go to 32-bits
+            2:  metric_value <= metric_spk_cnt[23:16];
+            3:  metric_value <= metric_spk_cnt[15:8];
+            4:  metric_value <= metric_spk_cnt[7:0];
 
-            7:  metric_value <= metric_clk_cnt[31:24];
-            8:  metric_value <= metric_clk_cnt[23:16];
-            9:  metric_value <= metric_clk_cnt[15:8];
-            10: metric_value <= metric_clk_cnt[7:0];
+            // Accumulate Count (SynOps)
+            5:  metric_value <= metric_acc_cnt[31:24];
+            6:  metric_value <= metric_acc_cnt[23:16];
+            7:  metric_value <= metric_acc_cnt[15:8];
+            8:  metric_value <= metric_acc_cnt[7:0];
 
+            // Active Clock Cycle Count (execution time)
+            9:  metric_value <= metric_clk_cnt[31:24];
+            10: metric_value <= metric_clk_cnt[23:16];
+            11: metric_value <= metric_clk_cnt[15:8];
+            12: metric_value <= metric_clk_cnt[7:0];
+
+            // Invalid metric address => return zero
             default: metric_value <= 0;
         endcase
 
@@ -524,9 +545,9 @@ always @(posedge clk) begin
     else if(metric_lst_clear) begin
 
         case(metric_lst_addr)
-            2:  metric_fire_cnt <= 0;
-            6:  metric_acc_cnt  <= 0;
-            10: metric_clk_cnt  <= 0;
+            4:  metric_spk_cnt <= 0;
+            8:  metric_acc_cnt  <= 0;
+            12: metric_clk_cnt  <= 0;
         endcase
 
         metric_lst_clear <= 0;
@@ -536,7 +557,7 @@ end
 always_comb metric_send = metric_send_reg && metric_read;
 
 // Time stepping
-always_comb step_done = fd_step_done && axon_step_done && neuron_step_done && dendrite_step_done && synapse_step_done && !output_fire_waiting;
+always_comb step_done = fd_step_done && axon_step_done && neuron_step_done && dendrite_step_done && synapse_step_done && ~output_fire_waiting;
 
 always_ff @(posedge clk) step_done_hold <= step_done;
 

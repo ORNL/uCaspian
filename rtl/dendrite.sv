@@ -160,7 +160,7 @@ always_ff @(posedge clk) begin
         activity_0 <= 0;
         activity_1 <= 0;
     end
-    else if(!charge_ram_select) begin
+    else if(~charge_ram_select) begin
         if(clr_act_vec)
             activity_0 <= 0;
         else
@@ -188,6 +188,7 @@ find_set_bit_16 detect_act_inst(
     .none_found(activity_none)
 );
 
+// Register based on activity decoder
 logic [1:0] activity_none_hold;
 always_ff @(posedge clk) begin
     if(reset || next_step || clear_act || clear_config) begin
@@ -280,10 +281,10 @@ always_ff @(posedge clk) begin
 
 end
 
-// Flush to Neuron
+// Signal when dendrite charge has been flushed to the neuron module
 logic flush_done;
 
-// TODO
+// Determine when computation is complete
 always_comb begin
     step_done = flush_done && activity_none && (activity_none_hold == 2'b11) && (~incoming_rd_en && ~incoming_rd_dly && ~incoming_wr_en);
 end
@@ -335,7 +336,6 @@ always_ff @(posedge clk) begin
         flush_stop    <= 0;
         flush_done    <= 0;
         activity_mask <= 0;
-        flush_done    <= 0;
 
 
         outgoing_rd_en <= 0;
@@ -429,7 +429,7 @@ always_ff @(posedge clk) begin
     neuron_vld <= 0;
     flush_ack  <= 0;
 
-    if(flush_new && !flush_ack) begin
+    if(flush_new && ~flush_ack) begin
         neuron_vld <= 1;
     end
     
@@ -440,14 +440,17 @@ always_ff @(posedge clk) begin
 end
 
 always_comb begin
+    /*
     if(enable && !clear_act && !clear_config && !clear_config) begin
         neuron_charge = outgoing_rd_data;
     end
     else begin
         neuron_charge = 0;
     end
+    */
     
     neuron_addr = outgoing_rd_addr;
+    neuron_charge = outgoing_rd_data;
     outgoing_wr_data = 0;
 end
 

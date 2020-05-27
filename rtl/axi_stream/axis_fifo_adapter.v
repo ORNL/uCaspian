@@ -26,6 +26,9 @@ THE SOFTWARE.
 
 `timescale 1ns / 1ps
 
+`ifndef AXIS_FIFO_ADAPTER_V
+`define AXIS_FIFO_ADAPTER_V
+
 /*
  * AXI4-Stream FIFO with width converter
  */
@@ -336,3 +339,4 @@ fifo_inst (
 );
 
 endmodule
+`endif
