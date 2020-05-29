@@ -1,5 +1,5 @@
 # External 25 MHz clock
-set_io -nowarn clk 20
+set_io -nowarn clk_i 20
 
 # FTDI2232 Channel A
 set_io -nowarn d0     25

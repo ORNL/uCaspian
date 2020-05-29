@@ -12,7 +12,7 @@
 `include "axi_stream/axis_fifo.v"
 
 module top(
-    input  clk, 
+    input  clk_i, 
 
     /* bidirectional, asynchronous data bus */
     inout  d0,
@@ -37,6 +37,26 @@ module top(
     output led3,
     output led4
 );
+
+    // system clock
+    logic clk;
+    logic locked;
+
+    // Generate 30 MHz clock from the 25 MHz oscillator
+    SB_PLL40_CORE #(
+        .FEEDBACK_PATH("SIMPLE"),
+	.DIVR(4'b0001),		// DIVR =  1
+	.DIVF(7'b1001100),	// DIVF = 76
+	.DIVQ(3'b101),		// DIVQ =  5
+	.FILTER_RANGE(3'b001)	// FILTER_RANGE = 1
+    ) uut (
+        .LOCK(locked),
+        .RESETB(1'b1),
+        .BYPASS(1'b0),
+        .REFERENCECLK(clk_i),
+        .PLLOUTCORE(clk)
+    );
+
     // system reset
     logic [2:0] reset_cnt;
     logic reset;
@@ -44,8 +64,11 @@ module top(
     initial reset_cnt = 3'b111;
 
     always_ff @(posedge clk) begin
-        if(reset_cnt > 0) begin
+        if(reset_cnt > 0 && locked) begin
             reset_cnt <= reset_cnt - 1;
+            reset     <= 1;
+        end
+        else if(reset_cnt != 0 && ~locked) begin
             reset     <= 1;
         end
         else begin
@@ -66,6 +89,7 @@ module top(
         .WR_PULSE_CYCLES(3),
         .RD_PULSE_CYCLES(3),
         .RD_WAIT_CYCLES(2)
+        // Safer/slower values:
         //.WR_SETUP_CYCLES(3),
         //.WR_PULSE_CYCLES(7),
         //.RD_PULSE_CYCLES(8),

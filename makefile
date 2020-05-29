@@ -18,16 +18,16 @@ CPP_SOURCES := $(wildcard $(SRC)/*.cpp)
 FAMILY-upduino ?= ice40
 DEVICE-upduino ?= up5k
 FOOTPRINT-upduino ?= sg48
-PINS-upduino ?= upduino_v2.pcf
+PINS-upduino ?= pins/upduino_v2.pcf
 TOP-upduino ?= $(basename upduino_top.sv)
 FREQ-upduino ?= 24
 
 FAMILY-devr0 ?= ice40
 DEVICE-devr0 ?= up5k
 FOOTPRINT-devr0 ?= sg48
-PINS-devr0 ?= dev_r0.pcf
+PINS-devr0 ?= pins/dev_r0.pcf
 TOP-devr0 ?= $(basename dev_r0_top.sv)
-FREQ-devr0 ?= 25
+FREQ-devr0 ?= 30
 
 # Select the board
 USB_DEV ?= 1-1:1.0
@@ -100,14 +100,13 @@ $(BUILD)/%.bin: $(BUILD)/%.asc | $(BUILD)
 %.flash: $(BUILD)/%.bin
 	$(ICEPROG) -e 128 # Force a reset
 	$(ICEPROG) $<
-	# echo $(USB_DEV) | tee /sys/bus/usb/drivers/ftdi_sio/bind
 
 %.prog: $(BUILD)/%.bin
 	$(ICEPROG) -I B -S $<
 
 # Open the Place & Route GUI to inspect the design
 %.gui: $(BUILD)/%.json
-	$(PNR) --gui --$(DEVICE) --pcf $(PINS) --freq $(FREQ) --json $<
+	$(PNR) --gui --$(DEVICE) --package $(FOOTPRINT) --pcf $(PINS) --freq $(FREQ) --json $<
 
 # Convert Verilog to C++ with Verilator
 $(VERILATOR_OUT)/Vucaspian: $(RTL_SOURCES) $(SRC)/ucaspian.cpp
