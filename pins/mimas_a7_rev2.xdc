@@ -6,7 +6,7 @@ set_property CONFIG_VOLTAGE 3.3 [current_design]
 #                                               CLOCK 100MHz                                                       #
 ####################################################################################################################
 set_property -dict { PACKAGE_PIN "H4"    IOSTANDARD LVCMOS33       SLEW FAST} [get_ports { clk1 }]     ;                # IO_L12P_T1_MRCC_35            Sch = CLK1
-create_clock -period 10.000 -name clk1 -waveform {0.000 5.000} [get_ports -filter { NAME =~  "*clk*" && DIRECTION == "IN" }]
+create_clock -period 10.000 -name clk1 -waveform {0.000 5.000} [get_ports { clk1 }] ;
 
 ####################################################################################################################
 #                                                   RESET - S3                                                     #
