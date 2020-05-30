@@ -48,10 +48,14 @@ VERILATOR_CPP = V$(VERILATOR_TOP).cpp
 YOSYS ?= yosys
 PNR ?= nextpnr-$(FAMILY-$(BOARD))
 VERILATOR ?= verilator
+VIVADO ?= vivado 
 
 # Select Icestorm programs
 ICEPACK ?= icepack
 ICEPROG ?= iceprog
+
+# For JTAG programming of Xilinx FPGAs
+XC3SPROG ?= xc3sprog
 
 # C++ (for Verilator)
 CXX ?= g++
@@ -118,6 +122,14 @@ $(VERILATOR_OUT)/Vucaspian: $(RTL_SOURCES) $(SRC)/ucaspian.cpp
 	    --cc $(RTL)/$(VERILATOR_TOP).sv \
 	    --exe $(CPP_SOURCES)
 	$(MAKE) -C $(VERILATOR_OUT) -f V$(VERILATOR_TOP).mk V$(VERILATOR_TOP)
+
+$(BUILD)/mimas_ucaspian.bit:
+	$(VIVADO) -mode batch -nolog -nojournal -source scripts/mimas.tcl
+
+mimas_bit: $(BUILD)/mimas_ucaspian.bit
+
+mimas_prog: $(BUILD)/mimas_ucaspian.bit
+	$(XC3SPROG) -c mimas_a7 $(BUILD)/mimas_ucaspian.bit
 
 # Have verilator lint the design
 lint:
