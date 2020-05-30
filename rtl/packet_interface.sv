@@ -74,10 +74,10 @@ localparam [7:0]
     OP_STEP      = 8'b00000001,
     OP_METRIC    = 8'b00000010,
     OP_CLR_ACT   = 8'b00000100,
-    OP_CLR_CFG   = 8'b00001000,
-    OP_CFG_NE    = 8'b00010000,
-    OP_CFG_SYN   = 8'b00100000,
-    OP_CFG_SYNS  = 8'b01000000;
+    OP_CLR_CFG   = 8'b00000101,
+    OP_CFG_NE    = 8'b00001000,
+    OP_CFG_SYN   = 8'b00010000,
+    OP_CFG_SYNS  = 8'b00010001;
 
 // Rx state machine
 localparam [2:0]
@@ -507,7 +507,7 @@ always_comb begin
             ack_sent_sig = ~tx_send;
 
             case(tx_write_bytes)
-                0: tx_data  = 8'b01110000;
+                0: tx_data  = 8'b00011000;
             endcase
 
             // end of state
@@ -519,7 +519,7 @@ always_comb begin
             ack_sent_sig = ~tx_send;
 
             case(tx_write_bytes)
-                0: tx_data  = 8'b00001100;
+                0: tx_data  = 8'b00000100;
             endcase
 
             // end of state
