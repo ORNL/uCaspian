@@ -127,10 +127,10 @@ module top(
 
     axis_ft245 
     #(
-        .WR_SETUP_CYCLES(10),
-        .WR_PULSE_CYCLES(15),
-        .RD_PULSE_CYCLES(15),
-        .RD_WAIT_CYCLES(10)
+        .WR_SETUP_CYCLES(5),
+        .WR_PULSE_CYCLES(10),
+        .RD_PULSE_CYCLES(11),
+        .RD_WAIT_CYCLES(6)
     )
     ft245_inst
     (

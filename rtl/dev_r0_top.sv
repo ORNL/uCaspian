@@ -42,6 +42,11 @@ module top(
     logic clk;
     logic locked;
 
+    // Just use 25 MHz for now
+    assign clk = clk_i;
+    assign locked = 1;
+
+    /*
     // Generate 30 MHz clock from the 25 MHz oscillator
     SB_PLL40_CORE #(
         .FEEDBACK_PATH("SIMPLE"),
@@ -56,6 +61,7 @@ module top(
         .REFERENCECLK(clk_i),
         .PLLOUTCORE(clk)
     );
+    */
 
     // system reset
     logic [2:0] reset_cnt;

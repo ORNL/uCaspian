@@ -27,7 +27,7 @@ DEVICE-devr0 ?= up5k
 FOOTPRINT-devr0 ?= sg48
 PINS-devr0 ?= pins/dev_r0.pcf
 TOP-devr0 ?= $(basename dev_r0_top.sv)
-FREQ-devr0 ?= 30
+FREQ-devr0 ?= 25
 
 # Select the board
 USB_DEV ?= 1-1:1.0

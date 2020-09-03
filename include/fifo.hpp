@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <vector>
 #include <fstream>
 #include <cstdint>
 #include <deque>
@@ -75,7 +76,8 @@ class FakeFifo
 
         bool full() const
         {
-            return fifo_full;
+            //return fifo_full;
+            return m_data.size() >= max_size;
         }
 
         bool empty() const
@@ -104,6 +106,26 @@ class FakeFifo
             }
             else
             {
+
+                if(clk)
+                {
+                    if(m_dir)
+                    {
+                        *vld = !empty();
+                    }
+                    else
+                    {
+                        *rdy = !full();
+                    }
+
+                    if(*rdy && *vld)
+                    {
+                        if(m_dir) *data_port = pop();
+                        else push(*data_port);
+                    }
+                }
+
+                /*
                 if(clk && *rdy && *vld)
                 {
                     if(m_dir)
@@ -123,9 +145,18 @@ class FakeFifo
                     }
                     else
                     {
-                        *rdy = true;
+                        if(m_data.size() >= max_size)
+                        {
+                            *rdy = false;
+                        }
+                        else
+                        {
+                            *rdy = true;
+
+                        }
                     }
                 }
+                */
             }
         }
 
@@ -134,6 +165,7 @@ class FakeFifo
         {
             if(!rst && clk)
             {
+
                 /* data is moved when rdy and vld are asserted */
                 if(*rdy && *vld)
                 {
@@ -163,6 +195,8 @@ class FakeFifo
     private:
         /* our data queue */
         std::deque<T> m_data;
+
+        const int max_size = 32;
 
         /* true = input to verilog, false = output from verilog */
         bool    m_dir;
