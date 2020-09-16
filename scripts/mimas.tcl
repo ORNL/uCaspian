@@ -16,7 +16,6 @@ read_verilog -sv rtl/find_set_bit.sv
 read_verilog -sv rtl/fire_dispatch.sv
 read_verilog -sv rtl/mimas_top.sv
 read_verilog -sv rtl/neuron.sv
-read_verilog -sv rtl/neuron.sv.bk
 read_verilog -sv rtl/packet_interface.sv
 read_verilog -sv rtl/synapse.sv
 read_verilog -sv rtl/ucaspian_core.sv
