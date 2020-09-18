@@ -470,13 +470,13 @@ always_comb begin
     case(tx_state_reg)
 
         TX_IDLE: begin
-            if(tx_packet_vld)                tx_state = TX_IDLE; // wait until vld goes low
-            else if(step_send)               tx_state = TX_STEP;
-            else if(output_fire_waiting)     tx_state = TX_FIRE;
-            else if(metric_send)             tx_state = TX_METRIC;
-            else if(cfg_done && !ack_sent)   tx_state = TX_ACK_CFG;
-            else if(clear_done && !ack_sent) tx_state = TX_ACK_CLR;
-            else                             tx_state = TX_IDLE;
+            if(tx_packet_vld)                                 tx_state = TX_IDLE; // wait until vld goes low
+            else if(step_send && !time_sent)                  tx_state = TX_STEP;
+            else if(output_fire_waiting && !output_fire_sent) tx_state = TX_FIRE;
+            else if(metric_send && !metric_sent)              tx_state = TX_METRIC;
+            else if(cfg_done && !ack_sent)                    tx_state = TX_ACK_CFG;
+            else if(clear_done && !ack_sent)                  tx_state = TX_ACK_CLR;
+            else                                              tx_state = TX_IDLE;
         end
 
         TX_FIRE: begin
