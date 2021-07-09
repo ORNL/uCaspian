@@ -328,7 +328,9 @@ logic neuron_output_rdy, neuron_output_vld;
 
 logic neuron_clear_done;
 logic neuron_step_done;
-logic neuron_enable = ~clear_act && ~clear_config;
+logic neuron_enable;
+always_comb neuron_enable = ~clear_act && ~clear_config;
+
 ucaspian_neuron neuron_inst(
     .clk(clk),
     .reset(reset),

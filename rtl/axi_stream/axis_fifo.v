@@ -26,6 +26,9 @@ THE SOFTWARE.
 
 `timescale 1ns / 1ps
 
+`ifndef AXIS_FIFO_SV
+`define AXIS_FIFO_SV
+
 /*
  * AXI4-Stream FIFO
  */
@@ -340,3 +343,5 @@ always @(posedge clk) begin
 end
 
 endmodule
+
+`endif

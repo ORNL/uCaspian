@@ -26,6 +26,9 @@ THE SOFTWARE.
 
 `timescale 1ns / 1ps
 
+`ifndef AXIS_FT245_SV
+`define AXIS_FT245_SV
+
 /*
  * FT245 to AXI stream bridge
  */
@@ -284,3 +287,5 @@ always_ff @(posedge clk) begin
 end
 
 endmodule
+
+`endif
