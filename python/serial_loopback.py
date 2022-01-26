@@ -14,12 +14,12 @@ def run_test(ser, length):
     wr_msg = randomString(length)
     encoded = bytes(wr_msg, 'ascii')
     msg_size = len(encoded)
-    
+
     t0 = time.perf_counter()
     ser.write(encoded)
     rd_msg = ser.read(msg_size)
     t2 = time.perf_counter()
-    
+
     total_time = (t2-t0)
     throughput = (msg_size / total_time) / 1000
 
@@ -28,10 +28,10 @@ def run_test(ser, length):
     else:
         pass_or_fail = "FAIL"
         print("FAIL -- Total Time: {:.6f} | Size: {:5}".format(total_time, msg_size))
-    
 
 
-with serial.Serial('/dev/ttyUSB0', 1000000, timeout=0.5) as ser:
+
+with serial.Serial('/dev/ttyUSB0', 3000000, timeout=0.5) as ser:
 
     for i in range(1, 64, 1):
         run_test(ser, i)

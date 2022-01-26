@@ -22,6 +22,13 @@ PINS-upduino ?= upduino_v2.pcf
 TOP-upduino ?= $(basename upduino_top.sv)
 FREQ-upduino ?= 24
 
+FAMILY-upduino_uart ?= ice40
+DEVICE-upduino_uart ?= up5k
+FOOTPRINT-upduino_uart ?= sg48
+PINS-upduino_uart ?= upduino_v2.pcf
+TOP-upduino_uart ?= $(basename upduino_uart_top.sv)
+FREQ-upduino_uart ?= 24
+
 FAMILY-devr0 ?= ice40
 DEVICE-devr0 ?= up5k
 FOOTPRINT-devr0 ?= sg48
@@ -30,8 +37,12 @@ TOP-devr0 ?= $(basename dev_r0_top.sv)
 FREQ-devr0 ?= 25
 
 # Select the board
+# dev_r0
+#USB_DEV ?= 1-1:1.0
+#BOARD ?= devr0
+# UPduino V2 or V3
 USB_DEV ?= 1-1:1.0
-BOARD ?= devr0
+BOARD ?= upduino_uart
 
 # Select parameters based on the board
 DEVICE := $(DEVICE-$(BOARD))
@@ -58,7 +69,7 @@ CXX ?= g++
 CFLAGS ?= -O2 -march=native -mtune=native -fPIC -std=c++14 -fvisibility=hidden -flto
 
 # Verilator options
-VERILATOR_FLAGS = -Wno-fatal -O3 
+VERILATOR_FLAGS = -Wno-fatal -O3
 
 # Waveform traces
 VERILATOR_FLAGS += --trace-fst
@@ -100,7 +111,7 @@ $(BUILD)/%.bin: $(BUILD)/%.asc | $(BUILD)
 %.flash: $(BUILD)/%.bin
 	$(ICEPROG) -e 128 # Force a reset
 	$(ICEPROG) $<
-	# echo $(USB_DEV) | tee /sys/bus/usb/drivers/ftdi_sio/bind
+	echo $(USB_DEV) | sudo tee /sys/bus/usb/drivers/ftdi_sio/bind
 
 %.prog: $(BUILD)/%.bin
 	$(ICEPROG) -I B -S $<
