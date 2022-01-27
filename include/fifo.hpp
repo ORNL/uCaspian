@@ -11,8 +11,8 @@ class FakeFifo
 {
     public:
         /* true = input to verilog, false = output from verilog */
-        FakeFifo(uint8_t *clk_, uint8_t *rdy_, uint8_t *vld_, T *data_, bool dir_, bool rio_) : 
-            m_dir(dir_), random_io(rio_), clk(clk_), rdy(rdy_), vld(vld_), data_port(data_) 
+        FakeFifo(uint8_t *clk_, uint8_t *rdy_, uint8_t *vld_, T *data_, bool dir_, bool rio_) :
+            m_dir(dir_), random_io(rio_), clk(clk_), rdy(rdy_), vld(vld_), data_port(data_)
         {
             fifo_empty = true;
             fifo_full  = false;
@@ -66,7 +66,7 @@ class FakeFifo
             T item;
             char *buf = reinterpret_cast<char *>(&item);
             std::ofstream file(fname);
-            
+
             while(!empty())
             {
                 item = pop();
@@ -89,7 +89,7 @@ class FakeFifo
         {
             return m_data.size();
         }
-        
+
         void eval(uint8_t clk, uint8_t rst)
         {
             if(rst)
@@ -134,7 +134,7 @@ class FakeFifo
                     }
                     else
                     {
-                        push(*data_port); 
+                        push(*data_port);
                     }
                 }
                 else
@@ -196,7 +196,7 @@ class FakeFifo
         /* our data queue */
         std::deque<T> m_data;
 
-        const int max_size = 32;
+        const int max_size = 512;
 
         /* true = input to verilog, false = output from verilog */
         bool    m_dir;
@@ -204,7 +204,7 @@ class FakeFifo
         uint8_t fifo_full;
         uint8_t fifo_empty;
         uint8_t last_flag;
-        
+
         /* pointers into verilator obj */
         uint8_t *clk;
         uint8_t *rdy;
