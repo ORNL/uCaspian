@@ -1,4 +1,4 @@
-/* uCaspian Packet Interface 
+/* uCaspian Packet Interface
  * Parker Mitchell, 2019
  *
  * This packet interface is designed to deal with a low bandwidth
@@ -464,7 +464,7 @@ always_comb begin
     time_sent_sig     = 0;
     metric_sent_sig   = 0;
     out_fire_sent_sig = 0;
-    
+
     step_send = time_update && (!time_remaining || output_fire_waiting);
 
     case(tx_state_reg)
@@ -550,7 +550,7 @@ always_comb begin
             //if(!tx_send && ack_sent) tx_state = TX_IDLE;
             if(!tx_send) tx_state = TX_IDLE;
         end
-        
+
         default: begin
             tx_state = TX_IDLE;
         end

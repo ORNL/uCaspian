@@ -1,11 +1,11 @@
 /* uCaspian
  * Parker Mitchell, 2019
- * 
+ *
  * A neuromorphic "microcontroller" design with TENNLab integration.
  */
 `ifndef uCaspian_SV
 `define uCaspian_SV
-/* verilator lint_off DECLFILENAME */ 
+/* verilator lint_off DECLFILENAME */
 
 `include "packet_interface.sv"
 `include "ucaspian_core.sv"
@@ -13,7 +13,7 @@
 module ucaspian(
     input               sys_clk,
     input               reset,
-    
+
     // TX
     output logic [7:0]  write_data,
     output logic        write_vld,
@@ -26,15 +26,16 @@ module ucaspian(
 
     output              led_0,
     output              led_1,
-    output              led_2
+    output              led_2,
+    output              led_3,
 );
 
 //////
 // Signaling between packet interface and core
-wire output_fire_waiting, cfg_done, metric_send, clear_done, 
+wire output_fire_waiting, cfg_done, metric_send, clear_done,
     time_update, core_active, time_target_ack, time_remaining;
 
-wire output_fire_sent, ack_sent, time_sent, metric_read, 
+wire output_fire_sent, ack_sent, time_sent, metric_read,
     input_fire_waiting, input_fire_ack, clear_act, clear_config,
     cfg_synapse, time_target_waiting;
 
@@ -72,7 +73,7 @@ packet_interface pck_ctrl_inst(
 
     .ack_sent(ack_sent),
     .core_active(core_active),
-    .led(),
+    .led(led_3),
 
     .output_fire_addr(output_fire_addr),
     .output_fire_waiting(output_fire_waiting),
@@ -156,5 +157,5 @@ ucaspian_core core(
 
 endmodule
 
-/* verilator lint_on DECLFILENAME */ 
+/* verilator lint_on DECLFILENAME */
 `endif

@@ -63,7 +63,7 @@ always @(posedge clk) begin
         if (counter == 0) begin
             out <= 1;
             counter <= N - 1;
-        end 
+        end
         else begin
             counter <= counter - 1;
         end
@@ -158,9 +158,9 @@ endmodule
 
 
 module d_flipflop(
-    input       clk, 
-    input       reset, 
-    input       d_in, 
+    input       clk,
+    input       reset,
+    input       d_in,
     output reg  d_out
 );
 
@@ -176,9 +176,9 @@ endmodule
 
 
 module d_flipflop_pair(
-    input      clk, 
-    input      reset, 
-    input      d_in, 
+    input      clk,
+    input      reset,
+    input      d_in,
     output reg d_out
 );
 wire   intermediate;
@@ -197,9 +197,9 @@ endmodule
  * longer.
  */
 module pulse_stretcher(
-    input       clk, 
-    input       reset, 
-    input       in, 
+    input       clk,
+    input       reset,
+    input       in,
     output reg  out
 );
 parameter BITS = 20;
@@ -332,7 +332,7 @@ always @(posedge mclk) begin
             serial_r <= 0;
             //ready <= 1;
             ready    <= !rts;
-        end 
+        end
         else begin
             serial_r <= !shiftreg[0];
         end
@@ -359,11 +359,11 @@ endmodule
  */
 
 module uart_rx(
-    input               mclk, 
-    input               reset, 
+    input               mclk,
+    input               reset,
     input               baud_x4,
     input               serial,
-    output logic [7:0]  data, 
+    output logic [7:0]  data,
     output logic        data_strobe
 );
 
@@ -378,7 +378,7 @@ d_flipflop_pair input_dff(mclk, reset, serial, serial_sync);
  */
 logic [8:0]  shiftreg;
 logic [5:0]  state;
-logic        data_strobe;
+/* logic        data_strobe; */
 wire  [3:0]  bit_count = state[5:2];
 wire  [1:0]  bit_phase = state[1:0];
 
@@ -518,7 +518,7 @@ wire [7:0] read_data;
 wire fifo_almost_full;
 
 // cts is active low
-always_ff @(posedge clk) 
+always_ff @(posedge clk)
     cts <= fifo_almost_full;
 
 fifo #(.DEPTH(FIFO_DEPTH), .WIDTH(8)) buffer(
