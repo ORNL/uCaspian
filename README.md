@@ -9,3 +9,7 @@ A few details:
   - no connectivity restrictions
   - variable length packets
   - activity dependent evaluation
+
+## Notes
+- Add [rules/upduinov3.rules](rules/upduinov3.rules) to /etc/udev/rules.d on Ubuntu to allow using the upduino without root.
+
