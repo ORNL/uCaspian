@@ -112,3 +112,5 @@ Verible has useful system verilog linting and formating tools.
     ./bin/pass_bench ucaspian 5 5 10
 
     ```
+
+10. To configure the caspian processor to run using hardware, add `{"Backend": "uCaspian_USB"}` to the caspian config.
