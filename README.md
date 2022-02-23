@@ -73,9 +73,9 @@ Verible has useful system verilog linting and formating tools.
 5. Checkout UPduino branches.
 
     ```bash
-    git checkout 7ry/new_updruino
+    git checkout 7ry/new_upduino
     cd ucaspian
-    git checkout 7ry/new_updruino
+    git checkout 7ry/new_upduino
     ```
 
 6. Build and load ucaspian FPGA image.
