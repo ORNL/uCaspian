@@ -29,6 +29,13 @@ PINS-upduino_uart ?= pins/upduino_v2.pcf
 TOP-upduino_uart ?= $(basename upduino_uart_top.sv)
 FREQ-upduino_uart ?= 24
 
+FAMILY-upduino_spi ?= ice40
+DEVICE-upduino_spi ?= up5k
+FOOTPRINT-upduino_spi ?= sg48
+PINS-upduino_spi ?= pins/upduino_v2.pcf
+TOP-upduino_spi ?= $(basename upduino_spi_top.sv)
+FREQ-upduino_spi ?= 24
+
 FAMILY-devr0 ?= ice40
 DEVICE-devr0 ?= up5k
 FOOTPRINT-devr0 ?= sg48
@@ -42,7 +49,7 @@ FREQ-devr0 ?= 25
 #BOARD ?= devr0
 # UPduino V2 or V3
 USB_DEV ?= 1-1:1.0
-BOARD ?= upduino_uart
+BOARD ?= upduino_spi
 
 # Select parameters based on the board
 DEVICE := $(DEVICE-$(BOARD))
