@@ -14,6 +14,10 @@
 #define PIN_SCK  18
 #define PIN_MOSI 19
 
+#define READ_STATUS_OP 1
+#define READ_BYTES_OP  2
+#define WRITE_BYTES_OP 4
+
 const uint LED_PIN = 25;
 
 static inline void cs_select()
@@ -24,6 +28,40 @@ static inline void cs_select()
 static inline void cs_deselect()
 {
    gpio_put(PIN_CS, 1);
+}
+
+static void write_registers(uint8_t reg, uint8_t *buf, uint16_t len)
+{
+   reg &= 0x7f;
+   cs_select();
+   spi_write_blocking(SPI_PORT, &reg, 1);
+   spi_write_blocking(SPI_PORT, buf, len);
+   cs_deselect();
+}
+
+static void read_registers(uint8_t reg, uint8_t *buf, uint16_t len)
+{
+   reg |= 0x80;
+   cs_select();
+   spi_write_blocking(SPI_PORT, &reg, 1);
+   spi_read_blocking(SPI_PORT, 0, buf, len);
+   cs_deselect();
+}
+
+void bi_directional() 
+{
+   uint8_t buf[1];
+   while (1) {
+      uint8_t status[2];
+      read_registers(READ_STATUS_OP, status, 2);
+      printf("Status avail: %d count: %d\n", status[0], status[1]);
+      int16_t ch = getchar_timeout_us(1000);
+      if (ch != PICO_ERROR_TIMEOUT) {
+         buf[0] = (uint8_t)ch;
+         write_registers(WRITE_BYTES_OP, buf, 1);
+      }
+      sleep_ms(1000);
+   }
 }
 
 void host_to_fpga() {
@@ -111,10 +149,10 @@ int main()
    // hw_set_bits(&spi_get_hw(spi_default)->cr1, SPI_SSPCR1_LBM_BITS);
 
    // Always select chip.
-   cs_select();
+   // cs_select();
 
-   // Turn on LED
-   gpio_put(LED_PIN, 1);
+   // Turn off LED
+   gpio_put(LED_PIN, 0);
 
    printf("Starting Job\n");
    sleep_ms(2000);
@@ -122,7 +160,9 @@ int main()
    // Launch second core for writing
    // multicore_launch_core1(host_to_fpga);
 
-   host_to_fpga();
+   bi_directional();
+
+   // host_to_fpga();
    // fpga_to_host();
 
    // loopback();

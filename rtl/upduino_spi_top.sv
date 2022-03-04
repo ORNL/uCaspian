@@ -14,10 +14,10 @@
 /* `include "axi_stream/axis_fifo.v" */
 
 module top(
-   input gpio_2,  // SCLK
-   input gpio_46, // MOSI
-   input gpio_47, // MISO
-   input gpio_45, // SSEL
+   input  gpio_2,  // SCLK
+   input  gpio_46, // MOSI
+   output gpio_47, // MISO
+   input  gpio_45, // SSEL
    // inout  gpio_37, // D0
    // inout  gpio_31, // D1
    // inout  gpio_35, // D2
