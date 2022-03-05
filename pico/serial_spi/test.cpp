@@ -317,12 +317,11 @@ static void manual_test()
             break;
          case 'e':
             for (int i = 0; i < rw_len; ++i) {
-               wbuf[i] = 'e';
+               wbuf[i] = 'e'+i;
             }
             write_read_register(WRITE_READ_BYTES_OP, wbuf, rbuf, rw_len);
             printf("Sending: ");
             for (int i = 0; i < rw_len; ++i) {
-               wbuf[i] = ch;
                printf("%c", wbuf[i]);
             }
             printf("\n");
@@ -356,7 +355,7 @@ static void manual_test()
          default:
             printf("Sending: ");
             for (int i = 0; i < rw_len; ++i) {
-               wbuf[i] = ch;
+               wbuf[i] = ch+i;
                printf("%c", wbuf[i]);
             }
             printf("\n");
