@@ -50,7 +50,12 @@ module top(
 
    logic [31:0] counter;
    initial counter = 0;
+   // always_ff @(posedge clk_sys) begin
    always_ff @(posedge clk_sys) begin
+      if (spi_reset) begin
+         reset <= 1;
+         counter <= 0;
+      end
       if (counter[26]) begin
          reset <= 0;
       end
@@ -87,16 +92,36 @@ module top(
 
    //// SPI ////
    logic spi_led;
+   logic spi_reset;
+   logic [7:0] spi_read_data;
+   logic spi_read_vld;
+   logic spi_read_rdy;
+   logic [7:0] spi_write_data;
+   logic spi_write_vld;
+   logic spi_write_rdy;
    SPI_slave SPI_slave_inst
    (
       .clk(clk_sys),
       .reset(reset),
+      .LED(spi_led),
+      .spi_reset(spi_reset),
+
       .SCK(gpio_2),
       .MOSI(gpio_46),
       .MISO(gpio_47),
       .SSEL(gpio_45),
-      .LED(spi_led)
+
+      .read_data(spi_read_data),
+      .read_vld(spi_read_vld),
+      .read_rdy(spi_read_rdy),
+      .write_data(spi_write_data),
+      .write_vld(spi_write_vld),
+      .write_rdy(spi_write_rdy)
    );
+
+   assign spi_write_data = spi_read_data;
+   assign spi_write_vld  = spi_read_vld;
+   assign spi_read_rdy   = spi_write_rdy;
 
    //// LEDs ////
    logic led_0, led_1, led_2, led_3;

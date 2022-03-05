@@ -8,19 +8,23 @@ module SPI_slave(
   input clk,
   input reset,
   output logic LED,
+  output spi_reset, // SPI was sent a reset command.
   // SPI
   input SCK,
   input MOSI,
   output MISO,
   input SSEL,
   // AXI-Stream
-  output read_data,
+  output [7:0] read_data,
   output read_vld,
   input  read_rdy,
-  input  write_data,
+  input  [7:0] write_data,
   input  write_vld,
   output write_rdy
 );
+
+// Default spi_reset to 0
+initial spi_reset = 0;
 
 /* Sample/synchronize SPI signals */
 
@@ -66,7 +70,7 @@ always_ff @(posedge clk) byte_received <= SSEL_active && SCK_risingedge && (bitc
 // // we use the LSB of the data received to control an LED
 // logic LED;
 // always_ff @(posedge clk) if(byte_received) LED <= byte_data_received[0];
-always_comb LED <= write_fifo_full;
+always_comb LED <= (read_rdy & read_vld) | (write_rdy & write_vld) | write_fifo_full;
 
 /* Transmit SPI Data */
 
@@ -103,37 +107,11 @@ assign MISO = byte_data_sent[7];  // send MSB first
 // so we don't bother with a tri-state buffer for MISO
 // otherwise we would need to tri-state MISO when SSEL is inactive
 
-/* Read FIFO */
-logic read_fifo_write_data;
-logic read_fifo_write_data;
-logic read_fifo_write_enable;
-logic read_fifo_read_enable;
-logic read_fifo_read_data;
-logic read_fifo_full;
-logic read_fifo_almost_full;
-logic read_fifo_empty;
-logic [7:0] read_fifo_count;
-logic [7:0] read_fifo_avail;
-fifo #(.DEPTH(16), .WIDTH(8)) read_fifo(
-  .clk(clk),
-  .reset(reset),
-  .write_data(read_fifo_write_data),
-  .write_enable(read_fifo_write_enable),
-  .read_enable(read_fifo_read_enable),
-  .read_data(read_fifo_read_data),
-  .full(read_fifo_full),
-  .almost_full(read_fifo_almost_full),
-  .empty(read_fifo_empty),
-  .count(read_fifo_count),
-  .avail(read_fifo_avail),
-);
-
 /* Write FIFO */
-logic write_fifo_write_data;
-logic write_fifo_write_data;
+logic [7:0] write_fifo_write_data;
 logic write_fifo_write_enable;
 logic write_fifo_read_enable;
-logic write_fifo_read_data;
+logic [7:0] write_fifo_read_data;
 logic write_fifo_full;
 logic write_fifo_almost_full;
 logic write_fifo_empty;
@@ -153,54 +131,127 @@ fifo #(.DEPTH(16), .WIDTH(8)) write_fifo(
   .avail(write_fifo_avail),
 );
 
+/* Read FIFO */
+logic [7:0] read_fifo_write_data;
+logic read_fifo_write_enable;
+logic read_fifo_read_enable;
+logic [7:0] read_fifo_read_data;
+logic read_fifo_full;
+logic read_fifo_almost_full;
+logic read_fifo_empty;
+logic [7:0] read_fifo_count;
+logic [7:0] read_fifo_avail;
+fifo #(.DEPTH(16), .WIDTH(8)) read_fifo(
+  .clk(clk),
+  .reset(reset),
+  .write_data(read_fifo_write_data),
+  .write_enable(read_fifo_write_enable),
+  .read_enable(read_fifo_read_enable),
+  .read_data(read_fifo_read_data),
+  .full(read_fifo_full),
+  .almost_full(read_fifo_almost_full),
+  .empty(read_fifo_empty),
+  .count(read_fifo_count),
+  .avail(read_fifo_avail),
+);
+
+/* FIFO to AXI-Stream */
+always_comb read_data <= write_fifo_read_data;
+always_comb read_vld  <= ~write_fifo_empty;
+always_comb write_fifo_read_enable <= read_rdy & read_vld;
+
+always_comb read_fifo_write_data <= write_data;
+always_comb write_rdy <= ~read_fifo_full;
+always_comb read_fifo_write_enable <= write_rdy & write_vld;
+
 /* Parser State Machine */
 localparam [7:0]
-  OP_READ_STATUS   = 8'b10000001,
-  OP_READ_BYTES    = 8'b10000010,
-  OP_WRITE_BYTES   = 8'b00000100;
+  OP_READ_STATUS      = 8'b10000001,
+  OP_READ_BYTES       = 8'b10000010,
+  OP_WRITE_BYTES      = 8'b00000100,
+  OP_WRITE_READ_BYTES = 8'b10000110,
+  OP_RESET            = 8'b00001000;
 
-localparam [2:0]
-    PARSER_IDLE         = 0,
-    PARSER_STATUS_AVAIL = 1,
-    PARSER_WRITE        = 2;
-logic [2:0]  parser_state;
+typedef enum {
+  PARSER_IDLE,
+  PARSER_STATUS_AVAIL,
+  PARSER_READ,
+  PARSER_WRITE,
+  PARSER_WRITE_READ
+} parser_state_t;
+parser_state_t parser_state;
 initial parser_state = PARSER_IDLE;
 
 always_ff @(posedge clk) begin
+  spi_reset <= 1'b0;
 
   write_fifo_write_data <= 8'h00;
   write_fifo_write_enable <= 1'b0;
+
+  read_fifo_read_enable <= 8'h00;
   
   if(~SSEL_active) begin
     parser_state <= PARSER_IDLE;
     byte_data_to_send <= 8'h00;
   end
+
   else begin // SSEL_active
     if (byte_received) begin
-      case(parser_state)
+      unique case(parser_state)
       PARSER_IDLE: begin
-        case(byte_data_received)
+        unique case(byte_data_received)
+
           OP_READ_STATUS: begin
             parser_state <= PARSER_STATUS_AVAIL;
             byte_data_to_send <= write_fifo_avail;
           end
+
           OP_READ_BYTES: begin
+            parser_state <= PARSER_READ;
+            byte_data_to_send <= read_fifo_read_data;
           end
+
           OP_WRITE_BYTES: begin
             parser_state <= PARSER_WRITE;
           end
+
+          OP_WRITE_READ_BYTES: begin
+            parser_state <= PARSER_WRITE_READ;
+            byte_data_to_send <= read_fifo_read_data;
+          end
+
+          OP_RESET: begin
+            spi_reset <= 1'b1;
+          end
+
           default: begin
           end
         endcase
       end 
+
       PARSER_STATUS_AVAIL: begin
-            parser_state <= PARSER_IDLE;
-            byte_data_to_send <= read_fifo_count;
+        parser_state <= PARSER_IDLE;
+        byte_data_to_send <= read_fifo_count;
       end 
+
+      PARSER_READ: begin
+        byte_data_to_send <= read_fifo_read_data;
+        read_fifo_read_enable <= 1'b1;
+      end 
+
       PARSER_WRITE: begin
-            write_fifo_write_data <= byte_data_received;
-            write_fifo_write_enable <= 1'b1;
+        write_fifo_write_data <= byte_data_received;
+        write_fifo_write_enable <= 1'b1;
       end 
+
+      PARSER_WRITE_READ: begin
+        byte_data_to_send <= read_fifo_read_data;
+        read_fifo_read_enable <= 1'b1;
+
+        write_fifo_write_data <= byte_data_received;
+        write_fifo_write_enable <= 1'b1;
+      end
+      
       default: begin
         parser_state <= PARSER_IDLE;
       end
