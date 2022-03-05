@@ -31,7 +31,6 @@ static inline void cs_select()
 static inline void cs_deselect()
 {
    gpio_put(PIN_CS, 1);
-   sleep_ms(10);
 }
 
 static void write_register(uint8_t reg, uint8_t *buf, uint16_t len)
@@ -104,6 +103,7 @@ static int verify_buf(uint8_t *ebuf, uint8_t *abuf, uint16_t len)
       else {
          printf("      Passed [%d] %d == %d\n", i, ebuf[i], abuf[i]);
       }
+      abuf[i] = 0;
    }
 
    if (passed == 0) {
@@ -128,7 +128,7 @@ static void automated_tests()
    // Clear out previous values
    printf("Sending Reset......\n");
    write_register(RESET_OP, wbuf, 0);
-   sleep_ms(2000);
+   sleep_ms(5000);
    verify_status("Reset", 16, 0) ? failed++ : passed++;
 
    // Send and read 1 value
@@ -188,6 +188,80 @@ static void automated_tests()
    read_register(READ_BYTES_OP, &rbuf[14], 1);
    read_register(READ_BYTES_OP, &rbuf[15], 1);
    verify_buf(wbuf, rbuf, 16) ? failed++ : passed++;
+
+   // Send and read 15 value
+   printf("15 Value Test.......\n");
+   write_register(WRITE_BYTES_OP, wbuf, 15);
+   verify_status("Status check", 16, 15) ? failed++ : passed++;
+   read_register(READ_BYTES_OP, rbuf, 15);
+   verify_buf(wbuf, rbuf, 15) ? failed++ : passed++;
+
+   // Send and read 16 value
+   printf("15 Value Test.......\n");
+   write_register(WRITE_BYTES_OP, &wbuf[0 ], 1);
+   write_register(WRITE_BYTES_OP, &wbuf[1 ], 1);
+   write_register(WRITE_BYTES_OP, &wbuf[2 ], 1);
+   write_register(WRITE_BYTES_OP, &wbuf[3 ], 1);
+   write_register(WRITE_BYTES_OP, &wbuf[4 ], 1);
+   write_register(WRITE_BYTES_OP, &wbuf[5 ], 1);
+   write_register(WRITE_BYTES_OP, &wbuf[6 ], 1);
+   write_register(WRITE_BYTES_OP, &wbuf[7 ], 1);
+   write_register(WRITE_BYTES_OP, &wbuf[8 ], 1);
+   write_register(WRITE_BYTES_OP, &wbuf[9 ], 1);
+   write_register(WRITE_BYTES_OP, &wbuf[10], 1);
+   write_register(WRITE_BYTES_OP, &wbuf[11], 1);
+   write_register(WRITE_BYTES_OP, &wbuf[12], 1);
+   write_register(WRITE_BYTES_OP, &wbuf[13], 1);
+   write_register(WRITE_BYTES_OP, &wbuf[14], 1);
+   verify_status("Status check", 16, 15) ? failed++ : passed++;
+   read_register(READ_BYTES_OP, rbuf, 15);
+   verify_buf(wbuf, rbuf, 15) ? failed++ : passed++;
+
+   // Send and read 16 value
+   printf("15 Value Test.......\n");
+   write_register(WRITE_BYTES_OP, wbuf, 15);
+   verify_status("Status check", 16, 15) ? failed++ : passed++;
+   read_register(READ_BYTES_OP, &rbuf[0 ], 1);
+   read_register(READ_BYTES_OP, &rbuf[1 ], 1);
+   read_register(READ_BYTES_OP, &rbuf[2 ], 1);
+   read_register(READ_BYTES_OP, &rbuf[3 ], 1);
+   read_register(READ_BYTES_OP, &rbuf[4 ], 1);
+   read_register(READ_BYTES_OP, &rbuf[5 ], 1);
+   read_register(READ_BYTES_OP, &rbuf[6 ], 1);
+   read_register(READ_BYTES_OP, &rbuf[7 ], 1);
+   read_register(READ_BYTES_OP, &rbuf[8 ], 1);
+   read_register(READ_BYTES_OP, &rbuf[9 ], 1);
+   read_register(READ_BYTES_OP, &rbuf[10], 1);
+   read_register(READ_BYTES_OP, &rbuf[11], 1);
+   read_register(READ_BYTES_OP, &rbuf[12], 1);
+   read_register(READ_BYTES_OP, &rbuf[13], 1);
+   read_register(READ_BYTES_OP, &rbuf[14], 1);
+   verify_buf(wbuf, rbuf, 15) ? failed++ : passed++;
+
+   // Send and read 16 value
+   printf("32 Value Test.......\n");
+   write_register(WRITE_BYTES_OP, wbuf, 16);
+   verify_status("Status check", 16, 16) ? failed++ : passed++;
+   write_register(WRITE_BYTES_OP, wbuf, 16);
+   verify_status("Status check", 0, 16) ? failed++ : passed++;
+   read_register(READ_BYTES_OP, rbuf, 16);
+   verify_buf(wbuf, rbuf, 16) ? failed++ : passed++;
+   read_register(READ_BYTES_OP, rbuf, 16);
+   verify_buf(wbuf, rbuf, 16) ? failed++ : passed++;
+
+   // Send and read 16 value
+   printf("32 Value Test.......\n");
+   write_register(WRITE_BYTES_OP, wbuf, 16);
+   verify_status("Status check", 16, 16) ? failed++ : passed++;
+   write_read_register(WRITE_READ_BYTES_OP, wbuf, rbuf, 16);
+   verify_buf(wbuf, rbuf, 16) ? failed++ : passed++;
+   verify_status("Status check", 16, 16) ? failed++ : passed++;
+   write_read_register(WRITE_READ_BYTES_OP, wbuf, rbuf, 16);
+   verify_buf(wbuf, rbuf, 16) ? failed++ : passed++;
+   verify_status("Status check", 16, 16) ? failed++ : passed++;
+   read_register(READ_BYTES_OP, rbuf, 16);
+   verify_buf(wbuf, rbuf, 16) ? failed++ : passed++;
+   verify_status("Status check", 16, 0) ? failed++ : passed++;
 
    printf("Finished Automated Tests Passed: %d, Failed: %d, Total: %d\n", passed, failed, passed+failed);
 }

@@ -87,18 +87,26 @@ always_ff @(posedge clk) begin
    end
 end
 
-always_ff @(posedge clk)
-if(SSEL_active)
-begin
-  if(SSEL_startmessage)
-    byte_data_sent <= 8'h00;
-  else
-  if(SCK_fallingedge)
-  begin
-    if(bitcnt==3'b000)
-      byte_data_sent <= byte_data_to_send;  
+always_ff @(posedge clk) begin
+  read_fifo_read_enable <= 1'b0;
+  if(SSEL_active) begin
+    if(SSEL_startmessage) begin
+      byte_data_sent <= 8'h00;
+    end
     else
-      byte_data_sent <= {byte_data_sent[6:0], 1'b0};
+    if(SCK_fallingedge) begin
+      if(bitcnt==3'b001) begin
+        if (parser_state == PARSER_READ || parser_state == PARSER_WRITE_READ) begin
+          read_fifo_read_enable <= 1'b1;
+        end
+      end
+      if(bitcnt==3'b000) begin
+        byte_data_sent <= byte_data_to_send;  
+      end
+      else begin
+        byte_data_sent <= {byte_data_sent[6:0], 1'b0};
+      end
+    end
   end
 end
 
@@ -188,8 +196,6 @@ always_ff @(posedge clk) begin
   write_fifo_write_data <= 8'h00;
   write_fifo_write_enable <= 1'b0;
 
-  read_fifo_read_enable <= 8'h00;
-  
   if(~SSEL_active) begin
     parser_state <= PARSER_IDLE;
     byte_data_to_send <= 8'h00;
@@ -236,7 +242,6 @@ always_ff @(posedge clk) begin
 
       PARSER_READ: begin
         byte_data_to_send <= read_fifo_read_data;
-        read_fifo_read_enable <= 1'b1;
       end 
 
       PARSER_WRITE: begin
@@ -246,7 +251,6 @@ always_ff @(posedge clk) begin
 
       PARSER_WRITE_READ: begin
         byte_data_to_send <= read_fifo_read_data;
-        read_fifo_read_enable <= 1'b1;
 
         write_fifo_write_data <= byte_data_received;
         write_fifo_write_enable <= 1'b1;
