@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string>
 #include "pico/stdlib.h"
+#include "pico/time.h"
 #include "hardware/gpio.h"
 #include "hardware/spi.h"
 #include "pico/binary_info.h"
@@ -20,6 +21,9 @@
 #define WRITE_BYTES_OP      4
 #define WRITE_READ_BYTES_OP 6
 #define RESET_OP            8
+
+#define SPI_WIDTH 8
+#define SPI_DEPTH 128
 
 const uint LED_PIN = 25;
 
@@ -76,7 +80,7 @@ static void bi_directional()
    }
 }
 
-static int verify_status(std::string msg, int8_t count, int8_t avail)
+static int verify_status(std::string msg, uint8_t count, uint8_t avail)
 {
    uint8_t status[2];
    read_register(READ_STATUS_OP, status, 2);
@@ -94,7 +98,7 @@ static int verify_buf(uint8_t *ebuf, uint8_t *abuf, uint16_t len)
 {
    bool passed = 0;
 
-   for (int i = 0; i < len; i++)
+   for (uint8_t i = 0; i < len; i++)
    {
       if (ebuf[i] != abuf[i]) {
          passed = 1;
@@ -115,10 +119,10 @@ static int verify_buf(uint8_t *ebuf, uint8_t *abuf, uint16_t len)
 
 static void automated_tests()
 {
-   int passed = 0;
-   int failed = 0;
-   uint8_t rbuf[32];
-   uint8_t wbuf[32];
+   uint8_t passed = 0;
+   uint8_t failed = 0;
+   uint8_t rbuf[SPI_DEPTH*2];
+   uint8_t wbuf[SPI_DEPTH*2];
    uint8_t status[2];
 
    for(int i = 0; i < 32; ++i) wbuf[i] = 'a'+i;
@@ -129,143 +133,173 @@ static void automated_tests()
    printf("Sending Reset......\n");
    write_register(RESET_OP, wbuf, 0);
    sleep_ms(5000);
-   verify_status("Reset", 16, 0) ? failed++ : passed++;
+   verify_status("Reset", SPI_DEPTH, 0) ? failed++ : passed++;
 
    printf("1 Value Test.......\n");
    write_register(WRITE_BYTES_OP, wbuf, 1);
-   verify_status("Status check", 16, 1) ? failed++ : passed++;
+   verify_status("Status check", SPI_DEPTH, 1) ? failed++ : passed++;
    read_register(READ_BYTES_OP, rbuf, 1);
    verify_buf(wbuf, rbuf, 1) ? failed++ : passed++;
 
-   printf("16 Value Test.......\n");
-   write_register(WRITE_BYTES_OP, wbuf, 16);
-   verify_status("Status check", 16, 16) ? failed++ : passed++;
-   read_register(READ_BYTES_OP, rbuf, 16);
-   verify_buf(wbuf, rbuf, 16) ? failed++ : passed++;
+   printf("%d Value Test.......\n", SPI_DEPTH);
+   write_register(WRITE_BYTES_OP, wbuf, SPI_DEPTH);
+   verify_status("Status check", SPI_DEPTH, SPI_DEPTH) ? failed++ : passed++;
+   read_register(READ_BYTES_OP, rbuf, SPI_DEPTH);
+   verify_buf(wbuf, rbuf, SPI_DEPTH) ? failed++ : passed++;
 
-   printf("16 Value Test.......\n");
-   write_register(WRITE_BYTES_OP, &wbuf[0 ], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[1 ], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[2 ], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[3 ], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[4 ], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[5 ], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[6 ], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[7 ], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[8 ], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[9 ], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[10], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[11], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[12], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[13], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[14], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[15], 1);
-   verify_status("Status check", 16, 16) ? failed++ : passed++;
-   read_register(READ_BYTES_OP, rbuf, 16);
-   verify_buf(wbuf, rbuf, 16) ? failed++ : passed++;
+   printf("%d Value Test.......\n", SPI_DEPTH);
+   for (uint8_t i = 0; i < SPI_DEPTH; ++i){
+      write_register(WRITE_BYTES_OP, &wbuf[i], 1);
+   }
+   verify_status("Status check", SPI_DEPTH, SPI_DEPTH) ? failed++ : passed++;
+   read_register(READ_BYTES_OP, rbuf, SPI_DEPTH);
+   verify_buf(wbuf, rbuf, SPI_DEPTH) ? failed++ : passed++;
 
-   printf("16 Value Test.......\n");
-   write_register(WRITE_BYTES_OP, wbuf, 16);
-   verify_status("Status check", 16, 16) ? failed++ : passed++;
-   read_register(READ_BYTES_OP, &rbuf[0 ], 1);
-   read_register(READ_BYTES_OP, &rbuf[1 ], 1);
-   read_register(READ_BYTES_OP, &rbuf[2 ], 1);
-   read_register(READ_BYTES_OP, &rbuf[3 ], 1);
-   read_register(READ_BYTES_OP, &rbuf[4 ], 1);
-   read_register(READ_BYTES_OP, &rbuf[5 ], 1);
-   read_register(READ_BYTES_OP, &rbuf[6 ], 1);
-   read_register(READ_BYTES_OP, &rbuf[7 ], 1);
-   read_register(READ_BYTES_OP, &rbuf[8 ], 1);
-   read_register(READ_BYTES_OP, &rbuf[9 ], 1);
-   read_register(READ_BYTES_OP, &rbuf[10], 1);
-   read_register(READ_BYTES_OP, &rbuf[11], 1);
-   read_register(READ_BYTES_OP, &rbuf[12], 1);
-   read_register(READ_BYTES_OP, &rbuf[13], 1);
-   read_register(READ_BYTES_OP, &rbuf[14], 1);
-   read_register(READ_BYTES_OP, &rbuf[15], 1);
-   verify_buf(wbuf, rbuf, 16) ? failed++ : passed++;
+   printf("%d Value Test.......\n", SPI_DEPTH);
+   write_register(WRITE_BYTES_OP, wbuf, SPI_DEPTH);
+   verify_status("Status check", SPI_DEPTH, SPI_DEPTH) ? failed++ : passed++;
+   for (int i = 0; i < SPI_DEPTH; ++i){
+      read_register(READ_BYTES_OP, &rbuf[i], 1);
+   }
+   verify_buf(wbuf, rbuf, SPI_DEPTH) ? failed++ : passed++;
 
-   printf("15 Value Test.......\n");
-   write_register(WRITE_BYTES_OP, wbuf, 15);
-   verify_status("Status check", 16, 15) ? failed++ : passed++;
-   read_register(READ_BYTES_OP, rbuf, 15);
-   verify_buf(wbuf, rbuf, 15) ? failed++ : passed++;
+   printf("%d Value Test.......\n", SPI_DEPTH-1);
+   write_register(WRITE_BYTES_OP, wbuf, SPI_DEPTH-1);
+   verify_status("Status check", SPI_DEPTH, SPI_DEPTH-1) ? failed++ : passed++;
+   read_register(READ_BYTES_OP, rbuf, SPI_DEPTH-1);
+   verify_buf(wbuf, rbuf, SPI_DEPTH-1) ? failed++ : passed++;
 
-   printf("15 Value Test.......\n");
-   write_register(WRITE_BYTES_OP, &wbuf[0 ], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[1 ], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[2 ], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[3 ], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[4 ], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[5 ], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[6 ], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[7 ], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[8 ], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[9 ], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[10], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[11], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[12], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[13], 1);
-   write_register(WRITE_BYTES_OP, &wbuf[14], 1);
-   verify_status("Status check", 16, 15) ? failed++ : passed++;
-   read_register(READ_BYTES_OP, rbuf, 15);
-   verify_buf(wbuf, rbuf, 15) ? failed++ : passed++;
+   printf("%d Value Test.......\n", SPI_DEPTH-1);
+   for (int i = 0; i < SPI_DEPTH-1; ++i){
+      write_register(WRITE_BYTES_OP, &wbuf[i], 1);
+   }
+   verify_status("Status check", SPI_DEPTH, SPI_DEPTH-1) ? failed++ : passed++;
+   read_register(READ_BYTES_OP, rbuf, SPI_DEPTH-1);
+   verify_buf(wbuf, rbuf, SPI_DEPTH-1) ? failed++ : passed++;
 
-   printf("15 Value Test.......\n");
-   write_register(WRITE_BYTES_OP, wbuf, 15);
-   verify_status("Status check", 16, 15) ? failed++ : passed++;
-   read_register(READ_BYTES_OP, &rbuf[0 ], 1);
-   read_register(READ_BYTES_OP, &rbuf[1 ], 1);
-   read_register(READ_BYTES_OP, &rbuf[2 ], 1);
-   read_register(READ_BYTES_OP, &rbuf[3 ], 1);
-   read_register(READ_BYTES_OP, &rbuf[4 ], 1);
-   read_register(READ_BYTES_OP, &rbuf[5 ], 1);
-   read_register(READ_BYTES_OP, &rbuf[6 ], 1);
-   read_register(READ_BYTES_OP, &rbuf[7 ], 1);
-   read_register(READ_BYTES_OP, &rbuf[8 ], 1);
-   read_register(READ_BYTES_OP, &rbuf[9 ], 1);
-   read_register(READ_BYTES_OP, &rbuf[10], 1);
-   read_register(READ_BYTES_OP, &rbuf[11], 1);
-   read_register(READ_BYTES_OP, &rbuf[12], 1);
-   read_register(READ_BYTES_OP, &rbuf[13], 1);
-   read_register(READ_BYTES_OP, &rbuf[14], 1);
-   verify_buf(wbuf, rbuf, 15) ? failed++ : passed++;
+   printf("%d Value Test.......\n", SPI_DEPTH-1);
+   write_register(WRITE_BYTES_OP, wbuf, SPI_DEPTH-1);
+   verify_status("Status check", SPI_DEPTH, SPI_DEPTH-1) ? failed++ : passed++;
+   for (int i = 0; i < SPI_DEPTH-1; ++i){
+      read_register(READ_BYTES_OP, &rbuf[i], 1);
+   }
+   verify_buf(wbuf, rbuf, SPI_DEPTH-1) ? failed++ : passed++;
 
-   printf("32 Value Test.......\n");
-   write_register(WRITE_BYTES_OP, wbuf, 16);
-   verify_status("Status check", 16, 16) ? failed++ : passed++;
-   write_register(WRITE_BYTES_OP, wbuf, 16);
-   verify_status("Status check", 0, 16) ? failed++ : passed++;
-   read_register(READ_BYTES_OP, rbuf, 16);
-   verify_buf(wbuf, rbuf, 16) ? failed++ : passed++;
-   read_register(READ_BYTES_OP, rbuf, 16);
-   verify_buf(wbuf, rbuf, 16) ? failed++ : passed++;
+   printf("%d Value Test.......\n", SPI_DEPTH*2);
+   write_register(WRITE_BYTES_OP, wbuf, SPI_DEPTH);
+   verify_status("Status check", SPI_DEPTH, SPI_DEPTH) ? failed++ : passed++;
+   write_register(WRITE_BYTES_OP, wbuf, SPI_DEPTH);
+   verify_status("Status check", 0, SPI_DEPTH) ? failed++ : passed++;
+   read_register(READ_BYTES_OP, rbuf, SPI_DEPTH);
+   verify_buf(wbuf, rbuf, SPI_DEPTH) ? failed++ : passed++;
+   read_register(READ_BYTES_OP, rbuf, SPI_DEPTH);
+   verify_buf(wbuf, rbuf, SPI_DEPTH) ? failed++ : passed++;
 
-   printf("32 Value Test.......\n");
-   write_register(WRITE_BYTES_OP, wbuf, 16);
-   verify_status("Status check", 16, 16) ? failed++ : passed++;
-   write_read_register(WRITE_READ_BYTES_OP, wbuf, rbuf, 16);
-   verify_buf(wbuf, rbuf, 16) ? failed++ : passed++;
-   verify_status("Status check", 16, 16) ? failed++ : passed++;
-   write_read_register(WRITE_READ_BYTES_OP, wbuf, rbuf, 16);
-   verify_buf(wbuf, rbuf, 16) ? failed++ : passed++;
-   verify_status("Status check", 16, 16) ? failed++ : passed++;
-   read_register(READ_BYTES_OP, rbuf, 16);
-   verify_buf(wbuf, rbuf, 16) ? failed++ : passed++;
-   verify_status("Status check", 16, 0) ? failed++ : passed++;
+   printf("%d Value Test.......\n", SPI_DEPTH*2);
+   write_register(WRITE_BYTES_OP, wbuf, SPI_DEPTH);
+   verify_status("Status check", SPI_DEPTH, SPI_DEPTH) ? failed++ : passed++;
+   write_read_register(WRITE_READ_BYTES_OP, wbuf, rbuf, SPI_DEPTH);
+   verify_buf(wbuf, rbuf, SPI_DEPTH) ? failed++ : passed++;
+   verify_status("Status check", SPI_DEPTH, SPI_DEPTH) ? failed++ : passed++;
+   write_read_register(WRITE_READ_BYTES_OP, wbuf, rbuf, SPI_DEPTH);
+   verify_buf(wbuf, rbuf, SPI_DEPTH) ? failed++ : passed++;
+   verify_status("Status check", SPI_DEPTH, SPI_DEPTH) ? failed++ : passed++;
+   read_register(READ_BYTES_OP, rbuf, SPI_DEPTH);
+   verify_buf(wbuf, rbuf, SPI_DEPTH) ? failed++ : passed++;
+   verify_status("Status check", SPI_DEPTH, 0) ? failed++ : passed++;
 
    printf("Finished Automated Tests Passed: %d, Failed: %d, Total: %d\n", passed, failed, passed+failed);
 }
 
+static void speed_test()
+{
+   uint8_t rbuf[SPI_DEPTH*2];
+   uint8_t wbuf[SPI_DEPTH*2];
+   uint64_t bytes = 1048576;
+   uint8_t status[2];
+   read_register(READ_STATUS_OP, status, 2);
+
+   // Reset and pre-add data.
+   printf("Sending Reset\n");
+   write_register(RESET_OP, wbuf, 0);
+   sleep_ms(5000);
+   verify_status("Reset", SPI_DEPTH, 0);
+   write_register(WRITE_BYTES_OP, wbuf, SPI_DEPTH);
+   verify_status("pre-add", SPI_DEPTH, SPI_DEPTH);
+
+   printf("Running Speed Test\n");
+   absolute_time_t tick = get_absolute_time();
+
+   // Time transfer of data.
+   for(int i = 0; i < bytes/SPI_DEPTH; ++i) {
+      do {
+         read_register(READ_STATUS_OP, status, 2);
+      } while (status[0] != SPI_DEPTH);
+      write_read_register(WRITE_READ_BYTES_OP, wbuf, rbuf, SPI_DEPTH);
+   }
+
+   verify_status("after-test", SPI_DEPTH, SPI_DEPTH);
+
+   absolute_time_t tock = get_absolute_time();
+
+   int64_t time_delta_us = absolute_time_diff_us(tick, tock);
+
+   printf("Times %lld %lld us\n", tick, tock);
+
+   printf("Time difference %lld us\n", time_delta_us);
+
+   printf("Amount Transferred %lld bytes\n", bytes);
+
+   printf("Transfer Speed %llf MBps = %llf Mbps\n", (double)bytes/time_delta_us, ((double)bytes/time_delta_us)*8);
+}
+
+static void speed_test_noflow()
+{
+   uint8_t rbuf[SPI_DEPTH*2];
+   uint8_t wbuf[SPI_DEPTH*2];
+   uint64_t bytes = 1048576;
+
+   // Reset and pre-add data.
+   printf("Sending Reset\n");
+   write_register(RESET_OP, wbuf, 0);
+   sleep_ms(5000);
+   verify_status("Reset", SPI_DEPTH, 0);
+   write_register(WRITE_BYTES_OP, wbuf, SPI_DEPTH);
+   verify_status("pre-add", SPI_DEPTH, SPI_DEPTH);
+
+   printf("Running No Flow Control Speed Test\n");
+   absolute_time_t tick = get_absolute_time();
+
+   // Time transfer of data.
+   for(int i = 0; i < bytes/SPI_DEPTH; ++i) {
+
+      write_read_register(WRITE_READ_BYTES_OP, wbuf, rbuf, SPI_DEPTH);
+   }
+
+   verify_status("after-test", SPI_DEPTH, SPI_DEPTH);
+
+   absolute_time_t tock = get_absolute_time();
+
+   int64_t time_delta_us = absolute_time_diff_us(tick, tock);
+
+   printf("Times %lld %lld us\n", tick, tock);
+
+   printf("Time difference %lld us\n", time_delta_us);
+
+   printf("Amount Transferred %lld bytes\n", bytes);
+
+   printf("Transfer Speed %llf MBps = %llf Mbps\n", (double)bytes/time_delta_us, ((double)bytes/time_delta_us)*8);
+}
+
 static void manual_test() 
 {
-   uint8_t rbuf[256];
-   uint8_t wbuf[256];
+   uint8_t rbuf[SPI_DEPTH*2];
+   uint8_t wbuf[SPI_DEPTH*2];
    uint8_t status[2];
    uint8_t rw_len = 1;
    bool pause = true;
 
-   printf("\n\n\nWelcome to Manual Test. Press '?' for help.\n\n");
+   printf("\n\n\nWelcome to SPI test. Press '?' for help.\n\n");
 
    while (1) {
 
@@ -292,11 +326,11 @@ static void manual_test()
             printf("Write Length = %d\n", rw_len);
             break;
          case '9':
-            rw_len = 15;
+            rw_len = SPI_DEPTH-1;
             printf("Write Length = %d\n", rw_len);
             break;
          case '0':
-            rw_len = 16;
+            rw_len = SPI_DEPTH;
             printf("Write Length = %d\n", rw_len);
             break;
          case 'q':
@@ -334,16 +368,24 @@ static void manual_test()
          case 't':
             automated_tests();
             break;
+         case 'w':
+            speed_test();
+            break;
+         case 'W':
+            speed_test_noflow();
+            break;
          case '?':
             printf("\nCommands:\n");
             printf("  1-8   - Set rw_len to value.\n");
-            printf("  9     - Set rw_len to 15.\n");
-            printf("  0     - Set rw_len to 16.\n");
+            printf("  9     - Set rw_len to SPI_DEPTH-1.\n");
+            printf("  0     - Set rw_len to SPI_DEPTH.\n");
             printf("  p     - Resume/Pause automatic status query.\n");
             printf("  q     - Query status.\n");
             printf("  r     - Read rw_len values.\n");
             printf("  e     - Read and write rw_len values.\n");
             printf("  t     - Run automated tests.\n");
+            printf("  w     - Run speed test.\n");
+            printf("  W     - Rune speed test (No flow control).\n");
             printf("  R     - Send reset to FPGA over SPI.\n");
             printf("  ?     - Show help.\n");
             printf("  other - Write rw_len of 'other'\n");
@@ -434,8 +476,8 @@ int main()
    gpio_set_dir(LED_PIN, GPIO_OUT);
    bi_decl(bi_1pin_with_name(LED_PIN, "On-board LED"));
 
-   // SPI initialisation. This example will use SPI at 1MHz.
-   spi_init(SPI_PORT, 1000*1000);
+   // SPI initialisation. This example will use SPI at 3MHz.
+   spi_init(SPI_PORT, 1000*1000*3);
    gpio_set_function(PIN_MISO, GPIO_FUNC_SPI);
    gpio_set_function(PIN_SCK,  GPIO_FUNC_SPI);
    gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI);

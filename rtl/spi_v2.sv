@@ -2,8 +2,9 @@
  * Parts from: https://www.fpga4fun.com/SPI2.html
  */
 `include "util.sv"
+`include "axis_clock_converter.sv"
 
-module SPI_slave(
+module SPI_slave_v2(
   // Base signals
   input clk,
   input reset,
@@ -165,14 +166,75 @@ fifo #(.DEPTH(DEPTH), .WIDTH(WIDTH)) read_fifo(
   .avail(read_fifo_avail),
 );
 
-/* FIFO to AXI-Stream */
-always_comb read_data <= write_fifo_read_data;
-always_comb read_vld  <= ~write_fifo_empty;
-always_comb write_fifo_read_enable <= read_rdy & read_vld;
+/* Write Clock Converter */
+logic write_cc_s_axis_aclk;
+logic write_cc_s_axis_tvalid;
+logic write_cc_s_axis_tready;
+logic [WIDTH-1:0] write_cc_s_axis_tdata;
+logic write_cc_m_axis_aclk;
+logic write_cc_m_axis_tvalid;
+logic write_cc_m_axis_tready;
+logic [WIDTH-1:0] write_cc_m_axis_tdata;
+axis_clock_converter #(.DATA_WIDTH(WIDTH)) write_clock_converter(
+  .reset(reset),
+  .s_axis_aclk(write_cc_s_axis_aclk),
+  .s_axis_tvalid(write_cc_s_axis_tvalid),
+  .s_axis_tready(write_cc_s_axis_tready),
+  .s_axis_tdata(write_cc_s_axis_tdata),
+  .m_axis_aclk(write_cc_m_axis_aclk),
+  .m_axis_tvalid(write_cc_m_axis_tvalid),
+  .m_axis_tready(write_cc_m_axis_tready),
+  .m_axis_tdata(write_cc_m_axis_tdata)
+);
+// assign write_cc_m_axis_tvalid          =  write_cc_s_axis_tvalid;
+// assign write_cc_s_axis_tready          =  write_cc_m_axis_tready;
+// assign write_cc_m_axis_tdata           =  write_cc_s_axis_tdata;
 
-always_comb read_fifo_write_data <= write_data;
-always_comb write_rdy <= ~read_fifo_full;
-always_comb read_fifo_write_enable <= write_rdy & write_vld;
+/* Read Clock Converter */
+logic read_cc_s_axis_aclk;
+logic read_cc_s_axis_tvalid;
+logic read_cc_s_axis_tready;
+logic [WIDTH-1:0] read_cc_s_axis_tdata;
+logic read_cc_m_axis_aclk;
+logic read_cc_m_axis_tvalid;
+logic read_cc_m_axis_tready;
+logic [WIDTH-1:0] read_cc_m_axis_tdata;
+axis_clock_converter #(.DATA_WIDTH(WIDTH)) read_clock_converter(
+  .reset(reset),
+  .s_axis_aclk(read_cc_s_axis_aclk),
+  .s_axis_tvalid(read_cc_s_axis_tvalid),
+  .s_axis_tready(read_cc_s_axis_tready),
+  .s_axis_tdata(read_cc_s_axis_tdata),
+  .m_axis_aclk(read_cc_m_axis_aclk),
+  .m_axis_tvalid(read_cc_m_axis_tvalid),
+  .m_axis_tready(read_cc_m_axis_tready),
+  .m_axis_tdata(read_cc_m_axis_tdata)
+);
+// assign read_cc_m_axis_tvalid          =  read_cc_s_axis_tvalid;
+// assign read_cc_s_axis_tready          =  read_cc_m_axis_tready;
+// assign read_cc_m_axis_tdata           =  read_cc_s_axis_tdata;
+
+/* FIFO to AXI-Stream */
+always_comb write_cc_s_axis_aclk <= clk; // SPI Clock
+always_comb write_cc_s_axis_tdata <= write_fifo_read_data;
+always_comb write_cc_s_axis_tvalid <= ~write_fifo_empty;
+always_comb write_fifo_read_enable <= write_cc_s_axis_tready & write_cc_s_axis_tvalid;
+
+always_comb read_cc_m_axis_aclk <= clk; // SPI Clock
+always_comb read_fifo_write_data <= read_cc_m_axis_tdata;
+always_comb read_cc_m_axis_tready <= ~read_fifo_full;
+always_comb read_fifo_write_enable <= read_cc_m_axis_tready & read_cc_m_axis_tvalid;
+
+/* CLOCK Converter to external */
+always_comb write_cc_m_axis_aclk <= clk;
+always_comb read_vld <= write_cc_m_axis_tvalid;
+always_comb write_cc_m_axis_tready <= read_rdy;
+always_comb read_data <= write_cc_m_axis_tdata;
+
+always_comb read_cc_s_axis_aclk <= clk;
+always_comb read_cc_s_axis_tvalid <= write_vld;
+always_comb write_rdy <= read_cc_s_axis_tready;
+always_comb read_cc_s_axis_tdata <= write_data;
 
 /* Parser State Machine */
 localparam [WIDTH-1:0]
