@@ -10,6 +10,8 @@
 `include "ucaspian.sv"
 `include "util.sv"
 `include "spi.sv"
+// `include "spi_v2.sv"
+// `include "spi_v3.sv"
 /* `include "axi_stream/axis_ft245.sv" */
 /* `include "axi_stream/axis_fifo.v" */
 
@@ -18,6 +20,7 @@ module top(
    input  gpio_46, // MOSI
    output gpio_47, // MISO
    input  gpio_45, // SSEL
+   output  gpio_3, // System Clock Debug Output
    // inout  gpio_37, // D0
    // inout  gpio_31, // D1
    // inout  gpio_35, // D2
@@ -42,6 +45,8 @@ module top(
 );
    assign spi_cs = 1; // it is necessary to turn off the SPI flash chip
 
+   assign gpio_3 = clk_sys;
+
    //// System reset ////
 
    logic reset;
@@ -65,7 +70,7 @@ module top(
    //// Clocks ////
 
    /* logic clk_48;  // Generated Clock */
-   logic clk_sys; // System Clock
+   logic clk_sys; // 24 MHz System Clock
    logic clk_1;   // 3 Mbaud serial clock
    logic clk_4;   // 12 Mbaud serial clock
 
@@ -99,7 +104,8 @@ module top(
    logic [7:0] spi_write_data;
    logic spi_write_vld;
    logic spi_write_rdy;
-   SPI_slave SPI_slave_inst
+   SPI_slave #(.DEPTH(128), .WIDTH(8)) SPI_slave_inst
+   // SPI_slave_v2 #(.DEPTH(128), .WIDTH(8)) SPI_slave_inst
    (
       .clk(clk_sys),
       .reset(reset),
@@ -118,6 +124,27 @@ module top(
       .write_vld(spi_write_vld),
       .write_rdy(spi_write_rdy)
    );
+
+   // SPI_slave_v3 #(.DEPTH(128), .WIDTH(8)) SPI_slave_inst
+   // (
+   //    .clk_logic(clk_1),
+   //    .clk_comm(clk_sys),
+   //    .reset(reset),
+   //    .LED(spi_led),
+   //    .spi_reset(spi_reset),
+
+   //    .SCK(gpio_2),
+   //    .MOSI(gpio_46),
+   //    .MISO(gpio_47),
+   //    .SSEL(gpio_45),
+
+   //    .read_data(spi_read_data),
+   //    .read_vld(spi_read_vld),
+   //    .read_rdy(spi_read_rdy),
+   //    .write_data(spi_write_data),
+   //    .write_vld(spi_write_vld),
+   //    .write_rdy(spi_write_rdy)
+   // );
 
    assign spi_write_data = spi_read_data;
    assign spi_write_vld  = spi_read_vld;
