@@ -23,7 +23,7 @@
 #define RESET_OP            8
 
 #define SPI_WIDTH 8
-#define SPI_DEPTH 128
+#define SPI_DEPTH 16
 
 const uint LED_PIN = 25;
 
@@ -477,7 +477,7 @@ int main()
    bi_decl(bi_1pin_with_name(LED_PIN, "On-board LED"));
 
    // SPI initialisation. This example will use SPI at 3MHz.
-   spi_init(SPI_PORT, 1000*1000*3);
+   spi_init(SPI_PORT, 1000*1000*30);
    gpio_set_function(PIN_MISO, GPIO_FUNC_SPI);
    gpio_set_function(PIN_SCK,  GPIO_FUNC_SPI);
    gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI);

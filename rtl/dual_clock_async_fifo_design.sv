@@ -35,17 +35,24 @@ module async_fifo1
 
   output logic [DSIZE-1:0] rdata,
   output logic wfull,
-  output logic rempty
+  output logic rempty,
+  output logic [7:0] count,
+  output logic [7:0] avail
 );
+
+  localparam DEPTH = 2 ** ASIZE;
 
   logic [ASIZE-1:0] waddr, raddr;
   logic [ASIZE:0] wptr, rptr, wq2_rptr, rq2_wptr;
 
-  sync_r2w sync_r2w (.*);
-  sync_w2r sync_w2r (.*);
+  sync_r2w #(ASIZE) sync_r2w (.*);
+  sync_w2r #(ASIZE) sync_w2r (.*);
   fifomem #(DSIZE, ASIZE) fifomem (.*);
   rptr_empty #(ASIZE) rptr_empty (.*);
   wptr_full #(ASIZE) wptr_full (.*);
+
+  assign count = {wfull,(waddr-raddr)};
+  assign avail = DEPTH-count;
 
 endmodule
 

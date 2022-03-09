@@ -9,9 +9,10 @@
 
 `include "ucaspian.sv"
 `include "util.sv"
-`include "spi.sv"
+// `include "spi.sv"
 // `include "spi_v2.sv"
 // `include "spi_v3.sv"
+`include "spi_v4.sv"
 /* `include "axi_stream/axis_ft245.sv" */
 /* `include "axi_stream/axis_fifo.v" */
 
@@ -21,6 +22,9 @@ module top(
    output gpio_47, // MISO
    input  gpio_45, // SSEL
    output  gpio_3, // System Clock Debug Output
+   output  gpio_32, // Debug Port 1
+   output  gpio_27, // Debug Port 2
+   output  gpio_26, // Debug Port 3
    // inout  gpio_37, // D0
    // inout  gpio_31, // D1
    // inout  gpio_35, // D2
@@ -104,12 +108,16 @@ module top(
    logic [7:0] spi_write_data;
    logic spi_write_vld;
    logic spi_write_rdy;
-   SPI_slave #(.DEPTH(128), .WIDTH(8)) SPI_slave_inst
+   // SPI_slave #(.DEPTH(128), .WIDTH(8)) SPI_slave_inst
    // SPI_slave_v2 #(.DEPTH(128), .WIDTH(8)) SPI_slave_inst
+   SPI_slave_v4 #(.DEPTH(16), .WIDTH(8)) SPI_slave_inst
    (
       .clk(clk_sys),
       .reset(reset),
       .LED(spi_led),
+      .LED1(gpio_32),
+      .LED2(gpio_27),
+      .LED3(gpio_26),
       .spi_reset(spi_reset),
 
       .SCK(gpio_2),
