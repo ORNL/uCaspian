@@ -4,7 +4,7 @@ import time
 from serial import Serial
 from test_func import *
 
-with Serial('/dev/ttyUSB0', 3000000, timeout=0.33) as ser:
+with Serial('/dev/serial0', 115200, timeout=0.33) as ser:
     print('Clear Configuration')
     send_clear_cfg(ser)
 
