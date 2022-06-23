@@ -64,7 +64,7 @@ static void write_read_register(uint8_t reg, uint8_t *wbuf, uint8_t *rbuf, uint1
    cs_deselect();
 }
 
-static void bi_directional() 
+static void bi_directional()
 {
    uint8_t buf[1];
    while (1) {
@@ -251,6 +251,9 @@ static void speed_test()
    printf("Amount Transferred %lld bytes\n", bytes);
 
    printf("Transfer Speed %llf MBps = %llf Mbps\n", (double)bytes/time_delta_us, ((double)bytes/time_delta_us)*8);
+
+   // Read out the last transfer
+   read_register(READ_BYTES_OP, rbuf, SPI_DEPTH);
 }
 
 static void speed_test_noflow()
@@ -289,9 +292,12 @@ static void speed_test_noflow()
    printf("Amount Transferred %lld bytes\n", bytes);
 
    printf("Transfer Speed %llf MBps = %llf Mbps\n", (double)bytes/time_delta_us, ((double)bytes/time_delta_us)*8);
+
+   // Read out the last transfer
+   read_register(READ_BYTES_OP, rbuf, SPI_DEPTH);
 }
 
-static void manual_test() 
+static void manual_test()
 {
    uint8_t rbuf[SPI_DEPTH*2];
    uint8_t wbuf[SPI_DEPTH*2];
