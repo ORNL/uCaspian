@@ -70,29 +70,40 @@ Verible has useful system verilog linting and formating tools.
     git clone git@code.ornl.gov:neurohw/ucaspian.git 
     ```
 
-5. Checkout UPduino branches.
+5. Checkout UPduino branches in the `processors/caspian` and `processors/caspian/ucaspian` repos.
 
     ```bash
-    git checkout 7ry/new_updruino
+    git checkout 7ry/new_upduino
     cd ucaspian
-    git checkout 7ry/new_updruino
+    git checkout 7ry/new_upduino
     ```
 
-6. Build and load ucaspian FPGA image.
+6. Plug in the UPduino and use dmesg to find the ftdi_sio device id
+
+    ```bash
+    $ dmesg
+    ...
+    [190067.797102] ftdi_sio 1-1.4:1.0: FTDI USB Serial Device converter detected
+    ...
+    
+    ```
+    Update the `USB_DEV` variable in the makefile with the device ID for your board. This allows the script to automatically bind the USB device driver to the FPGA device without requiring the device cable to be disconnected and reconnected.
+
+7. Build and load ucaspian FPGA image.
 
     ```bash
     # In framework/processors/caspian/ucaspian
     make flash
     ```
 
-7. Build Verilator software simulation source.
+8. Build Verilator software simulation source.
 
     ```bash
     # In framework/processors/caspian/ucaspian
     make test
     ```
 
-8. Run test python script to test connection to FPGA. You should see output data and see the LED on the FPGA blink.
+9. Run test python script to test connection to FPGA. You should see output data and see the LED on the FPGA blink.
 
     ```bash
     # In framework/processors/caspian/ucaspian
@@ -102,7 +113,7 @@ Verible has useful system verilog linting and formating tools.
     python python/basic_test.py 
     ```
 
-9. Run caspian passthrough test. You should see output which matches `./bin/pass_bench sim 5 5 10`.
+10. Run caspian passthrough test. You should see output which matches `./bin/pass_bench sim 5 5 10`.
 
     ```bash
     cd ..
@@ -113,4 +124,4 @@ Verible has useful system verilog linting and formating tools.
 
     ```
 
-10. To configure the caspian processor to run using hardware, add `{"Backend": "uCaspian_USB"}` to the caspian config.
+11. To configure the caspian processor to run using hardware, add `{"Backend": "uCaspian_USB"}` to the caspian config.

@@ -40,8 +40,9 @@ FREQ-devr0 ?= 25
 # dev_r0
 #USB_DEV ?= 1-1:1.0
 #BOARD ?= devr0
-# UPduino V2 or V3
-USB_DEV ?= 1-1:1.0
+## UPduino V2 or V3
+# USB_DEV ?= 1-1:1.0
+USB_DEV ?= 1-1.4:1.0
 BOARD ?= upduino_uart
 
 # Select parameters based on the board
