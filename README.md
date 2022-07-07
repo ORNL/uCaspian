@@ -50,6 +50,10 @@ Verible has useful system verilog linting and formating tools.
     ```bash
     git clone git@code.ornl.gov:neuromorphic-computing/framework.git
     ```
+    or
+    ```bash
+    git clone git@bitbucket.org:neuromorphic-utk/framework.git
+    ```
 
 2. Build the framework environment.
   
