@@ -199,6 +199,15 @@ always_ff @(posedge clk) begin
     end
 end
 
+logic [7:0] flush_idx;
+logic [7:0] flush_last;
+logic [1:0] flush_state;
+logic       flush_start;
+logic       flush_stop;
+logic       flush_new;
+logic       flush_ack;
+logic [7:0] flush_idx_incr;
+
 // Accumulate from Synapse
 logic accumulate_done;
 logic signed [8:0] incoming_charge;
@@ -294,15 +303,6 @@ localparam [1:0]
     SCAN_ACTIVITY = 1,
     ITER_ACTIVITY = 2,
     DONE_ACTIVITY = 3;
-
-logic [7:0] flush_idx;
-logic [7:0] flush_last;
-logic [1:0] flush_state;
-logic       flush_start;
-logic       flush_stop;
-logic       flush_new;
-logic       flush_ack;
-logic [7:0] flush_idx_incr;
 
 logic clear_act_start;
 logic clear_act_end;
