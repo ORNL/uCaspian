@@ -1,4 +1,4 @@
-/* uCaspian Packet Interface 
+/* uCaspian Packet Interface
  * Parker Mitchell, 2019
  *
  * This packet interface is designed to deal with a low bandwidth
@@ -102,245 +102,7 @@ initial metric_sent = 0;
 
 always_comb led = (rx_state == RX_IDLE);
 
-always @(posedge clk) begin
-    rx_state            <= rx_state;
-    rx_packet_rdy       <= 0;
-    time_target_waiting <= 0;
-    time_target_value   <= 0;
-    clear_act           <= 0;
-    clear_config        <= 0;
-
-    case(rx_state)
-        RX_IDLE: begin
-            rx_read_bytes <= 0;
-            cfg_addr      <= 0;
-            cfg_value     <= 0;
-            cfg_synapse   <= 0;
-            cfg_byte      <= MAX_CFG_BYTE;
-            rx_packet_rdy <= 1;
-            cfg_read_done <= 0;
-            metric_read   <= 0;
-
-            input_fire_waiting <= 0;
-            input_fire_addr    <= 0;
-            input_fire_value   <= 0;
-
-            // Wait for time
-            if(time_remaining || time_update || (time_update && output_fire_waiting)) begin
-                rx_packet_rdy <= 0;
-            end
-            // Wait for a packet
-            else if(rx_packet_rdy && rx_packet_vld) begin
-                rx_opcode     <= rx_packet_data;
-                rx_packet_rdy <= 0;
-                // Decode the desired operation
-                case(rx_packet_data)
-                    //OP_NOOP:     rx_state <= RX_IDLE;
-                    OP_STEP:     rx_state <= RX_STEP;
-                    OP_METRIC:   rx_state <= RX_METRIC;
-                    OP_CLR_ACT:  rx_state <= RX_CLEAR_ACT;
-                    OP_CLR_CFG:  rx_state <= RX_CLEAR_CFG;
-                    OP_CFG_NE:   rx_state <= RX_CFG_NE;
-                    OP_CFG_SYN:  rx_state <= RX_CFG_SYN;
-                    OP_CFG_SYNS: rx_state <= RX_CFG_SYN;
-                    default: begin
-                        if(rx_packet_data[7]) begin
-                            rx_state <= RX_FIRE;
-                        end
-                        else begin
-                            rx_state      <= RX_IDLE;
-                            rx_packet_rdy <= 1;
-                        end
-                    end
-                endcase
-            end
-        end
-        RX_FIRE: begin
-            // Send an input fire to the uCaspian core
-            if(input_fire_waiting) begin
-                if(input_fire_ack) begin
-                    input_fire_waiting <= 0;
-                    rx_state           <= RX_IDLE;
-                end
-                else begin
-                    input_fire_waiting <= 1;
-                    rx_state           <= RX_FIRE;
-                end
-            end
-            else if(rx_packet_rdy && rx_packet_vld) begin
-                input_fire_addr    <= {1'b0, rx_opcode[6:0]};
-                input_fire_value   <= rx_packet_data;
-                input_fire_waiting <= 1;
-            end
-            else begin
-                rx_packet_rdy <= 1;
-            end
-        end
-        RX_STEP: begin
-            // Advance the target time by the specified number of steps
-            //   Note: this is relative to the current target time
-            if(time_target_waiting) begin
-                if(time_target_ack) begin
-                    time_target_waiting <= 0;
-                    time_target_value   <= 0;
-                    rx_state            <= RX_IDLE;
-                end
-                else begin
-                    time_target_waiting <= time_target_waiting;
-                    time_target_value   <= time_target_value;
-                end
-            end
-            else if(rx_packet_rdy && rx_packet_vld) begin
-                time_target_value   <= rx_packet_data;
-                time_target_waiting <= 1;
-            end
-            else begin
-                rx_packet_rdy <= 1;
-            end
-        end
-        RX_CFG_NE: begin
-            // Configure the specified neuron
-            if(cfg_read_done) begin
-                cfg_addr      <= 0;
-                cfg_value     <= 0;
-                cfg_byte      <= MAX_CFG_BYTE;
-                rx_packet_rdy <= 0;
-                rx_state      <= RX_IDLE;
-            end
-            else if(rx_packet_rdy && rx_packet_vld) begin
-                rx_read_bytes <= rx_read_bytes + 1;
-                cfg_read_done <= 0;
-                case(rx_read_bytes)
-                    0: begin
-                        cfg_addr[7:0]   <= rx_packet_data;
-                        cfg_byte        <= 0;
-                    end
-                    // Threshold
-                    1: begin
-                        cfg_value[11:8] <= 0;
-                        cfg_value[7:0]  <= rx_packet_data;
-                        cfg_byte        <= 1;
-                    end
-                    // Axonal Delay,  Output Enable, Leak
-                    //     [7:4]           [3]       [2:0]
-                    2: begin
-                        cfg_value[11:8] <= 0;
-                        cfg_value[7:0]  <= rx_packet_data;
-                        cfg_byte        <= 2;
-                    end
-                    // Synapse start
-                    3: begin
-                        cfg_value[11:8] <= rx_packet_data[3:0];
-                        cfg_value[7:0]  <= 0;
-                        cfg_byte        <= 3;
-                    end
-                    4: begin
-                        cfg_value[7:0]  <= rx_packet_data;
-                        cfg_byte        <= 4;
-                    end
-                    // Synapse count
-                    5: begin
-                        cfg_value[11:8] <= 0;
-                        cfg_value[7:0]  <= rx_packet_data;
-                        cfg_byte        <= 5;
-                        cfg_read_done   <= 1;
-                    end
-                    default: begin
-                        rx_packet_rdy <= 0;
-                        cfg_read_done <= 1;
-                        rx_state      <= RX_IDLE;
-                    end
-                endcase
-            end
-            else begin
-                rx_packet_rdy <= 1;
-            end
-        end
-        RX_CFG_SYN: begin
-            // Configure the specified synapse
-            //   Currently just one, but there are plans...
-            cfg_synapse <= 1;
-            if(cfg_read_done) begin
-                cfg_addr      <= 0;
-                cfg_value     <= 0;
-                cfg_byte      <= MAX_CFG_BYTE;
-                rx_packet_rdy <= 0;
-                rx_state      <= RX_IDLE;
-            end
-            else if(rx_packet_rdy && rx_packet_vld) begin
-                rx_read_bytes <= rx_read_bytes + 1;
-                cfg_read_done <= 0;
-                case(rx_read_bytes)
-                    // Synapse address
-                    0: begin
-                        cfg_addr[11:8] <= rx_packet_data[3:0];
-                        cfg_byte       <= 0;
-                    end
-                    1: begin
-                        cfg_addr[7:0]  <= rx_packet_data;
-                        cfg_byte       <= 1;
-                    end
-                    // Synaptic weight
-                    2: begin
-                        cfg_value[11:8] <= 0;
-                        cfg_value[7:0]  <= rx_packet_data;
-                        cfg_byte        <= 2;
-                    end
-                    // Target neuron address
-                    3: begin
-                        cfg_value[11:8] <= 0;
-                        cfg_value[7:0]  <= rx_packet_data;
-                        cfg_byte        <= 3;
-                        cfg_read_done   <= 1;
-                    end
-                    default: begin
-                        rx_packet_rdy <= 0;
-                        cfg_read_done <= 1;
-                        rx_state      <= RX_IDLE;
-                    end
-                endcase
-            end
-            else begin
-                rx_packet_rdy <= 1;
-            end
-        end
-        RX_METRIC: begin
-            // Request the specified metric register
-            if(metric_sent) begin
-                metric_read <= 0;
-                rx_state    <= RX_IDLE;
-            end
-            else if(!metric_read) begin
-                if(rx_packet_rdy && rx_packet_vld) begin
-                    metric_addr <= rx_packet_data;
-                    metric_read <= 1;
-                end
-                else begin
-                    rx_packet_rdy <= 1;
-                end
-            end
-        end
-        RX_CLEAR_ACT: begin
-            // Clear activity in the network
-            clear_act <= 1;
-            if(ack_sent) begin
-                clear_act <= 0;
-                rx_state  <= RX_IDLE;
-            end
-        end
-        RX_CLEAR_CFG: begin
-            // Clear the configuration in the core
-            clear_config <= 1;
-            if(ack_sent) begin
-                clear_config <= 0;
-                rx_state     <= RX_IDLE;
-            end
-        end
-        default: begin
-            rx_state <= RX_IDLE;
-        end
-    endcase
-
+always_ff @(posedge clk) begin
     if(reset) begin
         rx_read_bytes <= 0;
         cfg_addr      <= 0;
@@ -352,6 +114,245 @@ always @(posedge clk) begin
         rx_opcode     <= 0;
         rx_state      <= RX_IDLE;
     end
+    else begin
+      rx_state            <= rx_state;
+      rx_packet_rdy       <= 0;
+      time_target_waiting <= 0;
+      time_target_value   <= 0;
+      clear_act           <= 0;
+      clear_config        <= 0;
+
+      case(rx_state)
+         RX_IDLE: begin
+               rx_read_bytes <= 0;
+               cfg_addr      <= 0;
+               cfg_value     <= 0;
+               cfg_synapse   <= 0;
+               cfg_byte      <= MAX_CFG_BYTE;
+               rx_packet_rdy <= 1;
+               cfg_read_done <= 0;
+               metric_read   <= 0;
+
+               input_fire_waiting <= 0;
+               input_fire_addr    <= 0;
+               input_fire_value   <= 0;
+
+               // Wait for time
+               if(time_remaining || time_update || (time_update && output_fire_waiting)) begin
+                  rx_packet_rdy <= 0;
+               end
+               // Wait for a packet
+               else if(rx_packet_rdy && rx_packet_vld) begin
+                  rx_opcode     <= rx_packet_data;
+                  rx_packet_rdy <= 0;
+                  // Decode the desired operation
+                  case(rx_packet_data)
+                     //OP_NOOP:     rx_state <= RX_IDLE;
+                     OP_STEP:     rx_state <= RX_STEP;
+                     OP_METRIC:   rx_state <= RX_METRIC;
+                     OP_CLR_ACT:  rx_state <= RX_CLEAR_ACT;
+                     OP_CLR_CFG:  rx_state <= RX_CLEAR_CFG;
+                     OP_CFG_NE:   rx_state <= RX_CFG_NE;
+                     OP_CFG_SYN:  rx_state <= RX_CFG_SYN;
+                     OP_CFG_SYNS: rx_state <= RX_CFG_SYN;
+                     default: begin
+                           if(rx_packet_data[7]) begin
+                              rx_state <= RX_FIRE;
+                           end
+                           else begin
+                              rx_state      <= RX_IDLE;
+                              rx_packet_rdy <= 1;
+                           end
+                     end
+                  endcase
+               end
+         end
+         RX_FIRE: begin
+               // Send an input fire to the uCaspian core
+               if(input_fire_waiting) begin
+                  if(input_fire_ack) begin
+                     input_fire_waiting <= 0;
+                     rx_state           <= RX_IDLE;
+                  end
+                  else begin
+                     input_fire_waiting <= 1;
+                     rx_state           <= RX_FIRE;
+                  end
+               end
+               else if(rx_packet_rdy && rx_packet_vld) begin
+                  input_fire_addr    <= {1'b0, rx_opcode[6:0]};
+                  input_fire_value   <= rx_packet_data;
+                  input_fire_waiting <= 1;
+               end
+               else begin
+                  rx_packet_rdy <= 1;
+               end
+         end
+         RX_STEP: begin
+               // Advance the target time by the specified number of steps
+               //   Note: this is relative to the current target time
+               if(time_target_waiting) begin
+                  if(time_target_ack) begin
+                     time_target_waiting <= 0;
+                     time_target_value   <= 0;
+                     rx_state            <= RX_IDLE;
+                  end
+                  else begin
+                     time_target_waiting <= time_target_waiting;
+                     time_target_value   <= time_target_value;
+                  end
+               end
+               else if(rx_packet_rdy && rx_packet_vld) begin
+                  time_target_value   <= rx_packet_data;
+                  time_target_waiting <= 1;
+               end
+               else begin
+                  rx_packet_rdy <= 1;
+               end
+         end
+         RX_CFG_NE: begin
+               // Configure the specified neuron
+               if(cfg_read_done) begin
+                  cfg_addr      <= 0;
+                  cfg_value     <= 0;
+                  cfg_byte      <= MAX_CFG_BYTE;
+                  rx_packet_rdy <= 0;
+                  rx_state      <= RX_IDLE;
+               end
+               else if(rx_packet_rdy && rx_packet_vld) begin
+                  rx_read_bytes <= rx_read_bytes + 1;
+                  cfg_read_done <= 0;
+                  case(rx_read_bytes)
+                     0: begin
+                           cfg_addr[7:0]   <= rx_packet_data;
+                           cfg_byte        <= 0;
+                     end
+                     // Threshold
+                     1: begin
+                           cfg_value[11:8] <= 0;
+                           cfg_value[7:0]  <= rx_packet_data;
+                           cfg_byte        <= 1;
+                     end
+                     // Axonal Delay,  Output Enable, Leak
+                     //     [7:4]           [3]       [2:0]
+                     2: begin
+                           cfg_value[11:8] <= 0;
+                           cfg_value[7:0]  <= rx_packet_data;
+                           cfg_byte        <= 2;
+                     end
+                     // Synapse start
+                     3: begin
+                           cfg_value[11:8] <= rx_packet_data[3:0];
+                           cfg_value[7:0]  <= 0;
+                           cfg_byte        <= 3;
+                     end
+                     4: begin
+                           cfg_value[7:0]  <= rx_packet_data;
+                           cfg_byte        <= 4;
+                     end
+                     // Synapse count
+                     5: begin
+                           cfg_value[11:8] <= 0;
+                           cfg_value[7:0]  <= rx_packet_data;
+                           cfg_byte        <= 5;
+                           cfg_read_done   <= 1;
+                     end
+                     default: begin
+                           rx_packet_rdy <= 0;
+                           cfg_read_done <= 1;
+                           rx_state      <= RX_IDLE;
+                     end
+                  endcase
+               end
+               else begin
+                  rx_packet_rdy <= 1;
+               end
+         end
+         RX_CFG_SYN: begin
+               // Configure the specified synapse
+               //   Currently just one, but there are plans...
+               cfg_synapse <= 1;
+               if(cfg_read_done) begin
+                  cfg_addr      <= 0;
+                  cfg_value     <= 0;
+                  cfg_byte      <= MAX_CFG_BYTE;
+                  rx_packet_rdy <= 0;
+                  rx_state      <= RX_IDLE;
+               end
+               else if(rx_packet_rdy && rx_packet_vld) begin
+                  rx_read_bytes <= rx_read_bytes + 1;
+                  cfg_read_done <= 0;
+                  case(rx_read_bytes)
+                     // Synapse address
+                     0: begin
+                           cfg_addr[11:8] <= rx_packet_data[3:0];
+                           cfg_byte       <= 0;
+                     end
+                     1: begin
+                           cfg_addr[7:0]  <= rx_packet_data;
+                           cfg_byte       <= 1;
+                     end
+                     // Synaptic weight
+                     2: begin
+                           cfg_value[11:8] <= 0;
+                           cfg_value[7:0]  <= rx_packet_data;
+                           cfg_byte        <= 2;
+                     end
+                     // Target neuron address
+                     3: begin
+                           cfg_value[11:8] <= 0;
+                           cfg_value[7:0]  <= rx_packet_data;
+                           cfg_byte        <= 3;
+                           cfg_read_done   <= 1;
+                     end
+                     default: begin
+                           rx_packet_rdy <= 0;
+                           cfg_read_done <= 1;
+                           rx_state      <= RX_IDLE;
+                     end
+                  endcase
+               end
+               else begin
+                  rx_packet_rdy <= 1;
+               end
+         end
+         RX_METRIC: begin
+               // Request the specified metric register
+               if(metric_sent) begin
+                  metric_read <= 0;
+                  rx_state    <= RX_IDLE;
+               end
+               else if(!metric_read) begin
+                  if(rx_packet_rdy && rx_packet_vld) begin
+                     metric_addr <= rx_packet_data;
+                     metric_read <= 1;
+                  end
+                  else begin
+                     rx_packet_rdy <= 1;
+                  end
+               end
+         end
+         RX_CLEAR_ACT: begin
+               // Clear activity in the network
+               clear_act <= 1;
+               if(ack_sent) begin
+                  clear_act <= 0;
+                  rx_state  <= RX_IDLE;
+               end
+         end
+         RX_CLEAR_CFG: begin
+               // Clear the configuration in the core
+               clear_config <= 1;
+               if(ack_sent) begin
+                  clear_config <= 0;
+                  rx_state     <= RX_IDLE;
+               end
+         end
+         default: begin
+               rx_state <= RX_IDLE;
+         end
+      endcase
+   end
 end
 
 // Tx state machine
@@ -401,7 +402,7 @@ always_ff @(posedge clk) begin
         else if(tx_packet_rdy && tx_send) begin
             tx_packet_data <= tx_data;
             tx_packet_vld  <= 1;
-            tx_write_bytes <= tx_write_bytes + 1; 
+            tx_write_bytes <= tx_write_bytes + 1;
         end
         else begin
             tx_packet_data <= tx_packet_data;
@@ -446,7 +447,7 @@ always_comb begin
     time_sent_sig     = 0;
     metric_sent_sig   = 0;
     out_fire_sent_sig = 0;
-    
+
     step_send = time_update && (!time_remaining || output_fire_waiting);
 
     case(tx_state_reg)
@@ -525,7 +526,7 @@ always_comb begin
             // end of state
             if(!tx_send && ack_sent) tx_state = TX_IDLE;
         end
-        
+
         default: begin
             tx_state = TX_IDLE;
         end
