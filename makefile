@@ -18,21 +18,21 @@ CPP_SOURCES := $(wildcard $(SRC)/*.cpp)
 FAMILY-upduino ?= ice40
 DEVICE-upduino ?= up5k
 FOOTPRINT-upduino ?= sg48
-PINS-upduino ?= upduino_v2.pcf
+PINS-upduino ?= pins/upduino_v2.pcf
 TOP-upduino ?= $(basename upduino_top.sv)
 FREQ-upduino ?= 24
 
 FAMILY-upduino_uart ?= ice40
 DEVICE-upduino_uart ?= up5k
 FOOTPRINT-upduino_uart ?= sg48
-PINS-upduino_uart ?= upduino_v2.pcf
+PINS-upduino_uart ?= pins/upduino_v2.pcf
 TOP-upduino_uart ?= $(basename upduino_uart_top.sv)
 FREQ-upduino_uart ?= 24
 
 FAMILY-devr0 ?= ice40
 DEVICE-devr0 ?= up5k
 FOOTPRINT-devr0 ?= sg48
-PINS-devr0 ?= dev_r0.pcf
+PINS-devr0 ?= pins/dev_r0.pcf
 TOP-devr0 ?= $(basename dev_r0_top.sv)
 FREQ-devr0 ?= 25
 
@@ -40,9 +40,10 @@ FREQ-devr0 ?= 25
 # dev_r0
 #USB_DEV ?= 1-1:1.0
 #BOARD ?= devr0
-# UPduino V2 or V3
-USB_DEV ?= 1-1:1.0
-BOARD ?= devr0
+## UPduino V2 or V3
+# USB_DEV ?= 1-1:1.0
+USB_DEV ?= 1-1.4:1.0
+BOARD ?= upduino_uart
 
 # Select parameters based on the board
 DEVICE := $(DEVICE-$(BOARD))
@@ -59,10 +60,14 @@ VERILATOR_CPP = V$(VERILATOR_TOP).cpp
 YOSYS ?= yosys
 PNR ?= nextpnr-$(FAMILY-$(BOARD))
 VERILATOR ?= verilator
+VIVADO ?= vivado 
 
 # Select Icestorm programs
 ICEPACK ?= icepack
 ICEPROG ?= iceprog
+
+# For JTAG programming of Xilinx FPGAs
+XC3SPROG ?= xc3sprog
 
 # C++ (for Verilator)
 CXX ?= g++
@@ -118,7 +123,7 @@ $(BUILD)/%.bin: $(BUILD)/%.asc | $(BUILD)
 
 # Open the Place & Route GUI to inspect the design
 %.gui: $(BUILD)/%.json
-	$(PNR) --gui --$(DEVICE) --pcf $(PINS) --freq $(FREQ) --json $<
+	$(PNR) --gui --$(DEVICE) --package $(FOOTPRINT) --pcf $(PINS) --freq $(FREQ) --json $<
 
 # Convert Verilog to C++ with Verilator
 $(VERILATOR_OUT)/Vucaspian: $(RTL_SOURCES) $(SRC)/ucaspian.cpp
@@ -130,6 +135,14 @@ $(VERILATOR_OUT)/Vucaspian: $(RTL_SOURCES) $(SRC)/ucaspian.cpp
 	    --cc $(RTL)/$(VERILATOR_TOP).sv \
 	    --exe $(CPP_SOURCES)
 	$(MAKE) -C $(VERILATOR_OUT) -f V$(VERILATOR_TOP).mk V$(VERILATOR_TOP)
+
+$(BUILD)/mimas_ucaspian.bit:
+	$(VIVADO) -mode batch -nolog -nojournal -source scripts/mimas.tcl
+
+mimas_bit: $(BUILD)/mimas_ucaspian.bit
+
+mimas_prog: $(BUILD)/mimas_ucaspian.bit
+	$(XC3SPROG) -c mimas_a7 $(BUILD)/mimas_ucaspian.bit
 
 # Have verilator lint the design
 lint:

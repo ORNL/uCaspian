@@ -9,6 +9,8 @@ Note: Currently multi-byte values (e.g. 32 bit time) are represented in big endi
 Every operation begins with a 1 byte op code followed by a specified sequence of additional bytes. Each operation has a varible length. In the case of the configure synapse range command, the length of the command is encoded immediately following the op code.
 
 ### Input Fire
+
+#### Minimized Format
 ```
 OPCODE: "1XXXXXXX" -- the Xs encode the input id
 INPUT VALUE: 1 Byte
@@ -16,6 +18,9 @@ INPUT VALUE: 1 Byte
 Total Size: 2 Bytes per Input Fire
 
 This format allows for up to 127 input neurons.
+
+#### Extended Format
+_Planned extention: Support a greater number of inputs_
 
 ### No Op 
 ```
@@ -49,13 +54,13 @@ Total Size: 1 Byte
 
 ### Clear Configuration
 ```
-OPCODE: "00001000"
+OPCODE: "00000101"
 ```
 Total Size: 1 Byte
 
 ### Configure Neuron
 ```
-OPCODE: "00010000"
+OPCODE: "00001000"
 NEURON ADDRESS: 1 Byte
 THRESHOLD: 1 Byte
 OTHER CONFIG: 1 Byte
@@ -69,7 +74,7 @@ Total Size: 7 Bytes per Neuron
 
 ### Configure Synapse
 ```
-OPCODE: "00100000"
+OPCODE: "00010000"
 SYN ADDRESS: 2 Bytes (12 bits)
 SYN CONFIG: 
   WEIGHT: 1 Byte
@@ -79,7 +84,7 @@ Total Size: 5 Bytes per Synapse
 
 ### Configure Synapses
 ```
-OPCODE: "01000000"
+OPCODE: "00010001"
 SYN START: 2 Bytes (12 bits)
 SYN END: 2 Bytes (12 bits)
 SYN CONFIG: (repeat for [start, end])
@@ -94,7 +99,7 @@ This is a more efficient encoding when multiple synapses are being loaded.
 
 ### Configuration Ack
 ```
-OPCODE: "01110000"
+OPCODE: "00011000"
 ```
 Total Size: 1 Byte
 
@@ -102,7 +107,7 @@ An ack is issued 1:1 for each configuration packet. This means only a single ack
 
 ### Clear Ack
 ```
-OPCODE: "00001100"
+OPCODE: "00000100"
 ```
 Total Size: 1 Byte
 

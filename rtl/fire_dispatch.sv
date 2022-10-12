@@ -54,34 +54,27 @@ always_comb begin
     syn_addr_2 = cur_idx[9:0];
     syn_addr_3 = cur_idx[9:0];
 
+    syn_vld_0  = 0;
+    syn_vld_1  = 0;
+    syn_vld_2  = 0;
+    syn_vld_3  = 0;
+
     unique case(cur_idx[11:10])
         0: begin
             cur_syn_rdy = syn_rdy_0;
             syn_vld_0   = cur_syn_vld;
-            syn_vld_1   = 0;
-            syn_vld_2   = 0;
-            syn_vld_3   = 0;
         end
         1: begin
             cur_syn_rdy = syn_rdy_1;
             syn_vld_1   = cur_syn_vld;
-            syn_vld_0   = 0;
-            syn_vld_2   = 0;
-            syn_vld_3   = 0;
         end
         2: begin
             cur_syn_rdy = syn_rdy_2;
             syn_vld_2   = cur_syn_vld;
-            syn_vld_1   = 0;
-            syn_vld_0   = 0;
-            syn_vld_3   = 0;
         end
         3: begin
             cur_syn_rdy = syn_rdy_3;
             syn_vld_3   = cur_syn_vld;
-            syn_vld_1   = 0;
-            syn_vld_2   = 0;
-            syn_vld_0   = 0;
         end
     endcase
 end
@@ -100,8 +93,8 @@ always_ff @(posedge clk) begin
 
         if(iterating) begin
             // push one index at a time
-            cur_syn_vld              <= 1;
-            step_done                <= 0;
+            cur_syn_vld <= 1;
+            step_done   <= 0;
 
             if(cur_syn_rdy && cur_syn_vld) begin
                 if(cur_idx == last_idx) begin

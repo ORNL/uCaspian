@@ -227,6 +227,11 @@ always_comb begin
     else delay_rd_data_fwd = delay_rd_data;
 end
 
+// actively processing
+logic [7:0] active_addr;
+logic       active_spike;
+logic       active_todo;
+
 // Activity scan state
 logic [7:0] scan_idx;
 logic       scan_done;
@@ -321,10 +326,6 @@ always_ff @(posedge clk) begin
 end
 
 // actively processing
-logic [7:0] active_addr;
-logic       active_spike;
-logic       active_todo;
-
 logic [7:0] last_active_addr;
 logic       last_active_spike;
 
@@ -421,7 +422,6 @@ always_ff @(posedge clk) begin
                 end
                 // write delay & determine if this has been shifted already
                 else if(~active_addr_will_shift) begin
-
                     // this has already been shfited this timestep / won't be shifted later
                     delay_wr_data <= delay_rd_data_fwd | (1 << (config_rd_data[23:20]-1));
                 end
