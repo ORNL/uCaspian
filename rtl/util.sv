@@ -80,7 +80,9 @@ module fifo(
     output logic [WIDTH-1:0]  read_data,
     output logic              almost_full,
     output logic              empty,
-    output logic              full
+    output logic              full,
+    output logic [7:0]        count,
+    output logic [7:0]        avail,
 );
 parameter WIDTH = 8;
 parameter DEPTH = 512;
@@ -90,10 +92,13 @@ localparam DEPTH_BITS = `CLOG2(DEPTH);
 logic [WIDTH-1:0] bram[0:DEPTH-1];
 logic [DEPTH_BITS-1:0] write_ptr;
 logic [DEPTH_BITS-1:0] read_ptr;
-logic [DEPTH_BITS-1:0] cur_size;
+logic [DEPTH_BITS:0] cur_size;
 
 wire empty_sig = (cur_size == 0);
-wire full_sig  = (cur_size == DEPTH-1);
+wire full_sig  = (cur_size == DEPTH);
+
+always_comb count = cur_size;
+always_comb avail = (DEPTH-cur_size);
 
 always_ff @(posedge clk)
     almost_full <= (cur_size >= DEPTH-10);

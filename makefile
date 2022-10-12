@@ -29,6 +29,20 @@ PINS-upduino_uart ?= pins/upduino_v2.pcf
 TOP-upduino_uart ?= $(basename upduino_uart_top.sv)
 FREQ-upduino_uart ?= 24
 
+FAMILY-upduino_spi_loop ?= ice40
+DEVICE-upduino_spi_loop ?= up5k
+FOOTPRINT-upduino_spi_loop ?= sg48
+PINS-upduino_spi_loop ?= pins/upduino_v2.pcf
+TOP-upduino_spi_loop ?= $(basename upduino_spi_top_loop.sv)
+FREQ-upduino_spi_loop ?= 24
+
+FAMILY-upduino_spi ?= ice40
+DEVICE-upduino_spi ?= up5k
+FOOTPRINT-upduino_spi ?= sg48
+PINS-upduino_spi ?= pins/upduino_v2.pcf
+TOP-upduino_spi ?= $(basename upduino_spi_top.sv)
+FREQ-upduino_spi ?= 24
+
 FAMILY-devr0 ?= ice40
 DEVICE-devr0 ?= up5k
 FOOTPRINT-devr0 ?= sg48
@@ -60,7 +74,7 @@ VERILATOR_CPP = V$(VERILATOR_TOP).cpp
 YOSYS ?= yosys
 PNR ?= nextpnr-$(FAMILY-$(BOARD))
 VERILATOR ?= verilator
-VIVADO ?= vivado 
+VIVADO ?= vivado
 
 # Select Icestorm programs
 ICEPACK ?= icepack
