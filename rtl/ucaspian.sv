@@ -27,7 +27,7 @@ module ucaspian(
     output              led_0,
     output              led_1,
     output              led_2,
-    output              led_3,
+    output              led_3
 );
 
 //////

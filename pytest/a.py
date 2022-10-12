@@ -6,7 +6,7 @@ import caspian
 p = caspian.Processor({"Backend": "uCaspian_Verilator", "Verilator": {"Trace_File": "a.fst"}})
 
 net = neuro.Network()
-net.set_properties(p.get_properties())
+net.set_properties(p.get_network_properties())
 
 prefix = 0
 a = prefix
@@ -35,7 +35,7 @@ for i in range(prefix+2):
 p.load_network(net)
 
 for i in range(prefix+2):
-    p.track_output(i)
+    p.track_output_events(i)
 
 # Fires
 p.apply_spike(neuro.Spike(time=0, id=a, value=1))
