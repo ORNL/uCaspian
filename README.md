@@ -129,3 +129,9 @@ Verible has useful system verilog linting and formating tools.
     ```
 
 11. To configure the caspian processor to run using hardware, add `{"Backend": "uCaspian_USB"}` to the caspian config.
+
+## Notes on SPI Versions
+
+- spi.sv - Working 3-bit sync, SPI implementation.
+- spi_v2.sv - Non-working, SPI clock synchronous implementation.
+- spi_v3.sv - Working 3-bit sync, with separate SPI communication and logic clocks.

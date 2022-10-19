@@ -1,4 +1,4 @@
-/* uCaspian Packet Interface 
+/* uCaspian Packet Interface
  * Parker Mitchell, 2019
  *
  * This packet interface is designed to deal with a low bandwidth
@@ -74,10 +74,10 @@ localparam [7:0]
     OP_STEP      = 8'b00000001,
     OP_METRIC    = 8'b00000010,
     OP_CLR_ACT   = 8'b00000100,
-    OP_CLR_CFG   = 8'b00001000,
-    OP_CFG_NE    = 8'b00010000,
-    OP_CFG_SYN   = 8'b00100000,
-    OP_CFG_SYNS  = 8'b01000000;
+    OP_CLR_CFG   = 8'b00000101,
+    OP_CFG_NE    = 8'b00001000,
+    OP_CFG_SYN   = 8'b00010000,
+    OP_CFG_SYNS  = 8'b00010001;
 
 // Rx state machine
 localparam [2:0]
@@ -94,6 +94,15 @@ logic [2:0]  rx_state;
 logic [2:0]  rx_read_bytes;
 logic [7:0]  rx_opcode;
 
+logic rx_rdy;
+always_comb begin
+    if(time_remaining || time_update || (time_update && output_fire_waiting)) begin
+        rx_packet_rdy = 0;
+    end else begin
+        rx_packet_rdy = rx_rdy;
+    end
+end
+
 logic cfg_read_done;
 logic metric_sent;
 
@@ -104,7 +113,7 @@ always_comb led = (rx_state == RX_IDLE);
 
 always @(posedge clk) begin
     rx_state            <= rx_state;
-    rx_packet_rdy       <= 0;
+    rx_rdy              <= 0;
     time_target_waiting <= 0;
     time_target_value   <= 0;
     clear_act           <= 0;
@@ -117,7 +126,7 @@ always @(posedge clk) begin
             cfg_value     <= 0;
             cfg_synapse   <= 0;
             cfg_byte      <= MAX_CFG_BYTE;
-            rx_packet_rdy <= 1;
+            rx_rdy        <= 1;
             cfg_read_done <= 0;
             metric_read   <= 0;
 
@@ -126,20 +135,27 @@ always @(posedge clk) begin
             input_fire_value   <= 0;
 
             // Wait for time
-            if(time_remaining || time_update || (time_update && output_fire_waiting)) begin
-                rx_packet_rdy <= 0;
-            end
+            //if(time_remaining || time_update || (time_update && output_fire_waiting)) begin
+            //    rx_rdy <= 0;
+            //end
             // Wait for a packet
-            else if(rx_packet_rdy && rx_packet_vld) begin
-                rx_opcode     <= rx_packet_data;
-                rx_packet_rdy <= 0;
+            if(rx_packet_rdy && rx_packet_vld) begin
+                rx_opcode <= rx_packet_data;
+                rx_rdy    <= 1;
                 // Decode the desired operation
                 case(rx_packet_data)
-                    //OP_NOOP:     rx_state <= RX_IDLE;
                     OP_STEP:     rx_state <= RX_STEP;
                     OP_METRIC:   rx_state <= RX_METRIC;
-                    OP_CLR_ACT:  rx_state <= RX_CLEAR_ACT;
-                    OP_CLR_CFG:  rx_state <= RX_CLEAR_CFG;
+                    OP_CLR_ACT: begin
+                        // no additional info, so set rdy to 0
+                        rx_state <= RX_CLEAR_ACT;
+                        rx_rdy   <= 0;
+                    end
+                    OP_CLR_CFG: begin
+                        // no additional info, so set rdy to 0
+                        rx_state <= RX_CLEAR_CFG;
+                        rx_rdy   <= 0;
+                    end
                     OP_CFG_NE:   rx_state <= RX_CFG_NE;
                     OP_CFG_SYN:  rx_state <= RX_CFG_SYN;
                     OP_CFG_SYNS: rx_state <= RX_CFG_SYN;
@@ -148,8 +164,8 @@ always @(posedge clk) begin
                             rx_state <= RX_FIRE;
                         end
                         else begin
-                            rx_state      <= RX_IDLE;
-                            rx_packet_rdy <= 1;
+                            rx_state <= RX_IDLE;
+                            rx_rdy   <= 1;
                         end
                     end
                 endcase
@@ -160,7 +176,8 @@ always @(posedge clk) begin
             if(input_fire_waiting) begin
                 if(input_fire_ack) begin
                     input_fire_waiting <= 0;
-                    rx_state           <= RX_IDLE;
+                    rx_state <= RX_IDLE;
+                    rx_rdy   <= 1;
                 end
                 else begin
                     input_fire_waiting <= 1;
@@ -173,7 +190,7 @@ always @(posedge clk) begin
                 input_fire_waiting <= 1;
             end
             else begin
-                rx_packet_rdy <= 1;
+                rx_rdy <= 1;
             end
         end
         RX_STEP: begin
@@ -184,6 +201,7 @@ always @(posedge clk) begin
                     time_target_waiting <= 0;
                     time_target_value   <= 0;
                     rx_state            <= RX_IDLE;
+                    rx_rdy              <= 1;
                 end
                 else begin
                     time_target_waiting <= time_target_waiting;
@@ -195,7 +213,7 @@ always @(posedge clk) begin
                 time_target_waiting <= 1;
             end
             else begin
-                rx_packet_rdy <= 1;
+                rx_rdy <= 1;
             end
         end
         RX_CFG_NE: begin
@@ -204,7 +222,7 @@ always @(posedge clk) begin
                 cfg_addr      <= 0;
                 cfg_value     <= 0;
                 cfg_byte      <= MAX_CFG_BYTE;
-                rx_packet_rdy <= 0;
+                rx_rdy        <= 0;
                 rx_state      <= RX_IDLE;
             end
             else if(rx_packet_rdy && rx_packet_vld) begin
@@ -246,14 +264,14 @@ always @(posedge clk) begin
                         cfg_read_done   <= 1;
                     end
                     default: begin
-                        rx_packet_rdy <= 0;
+                        rx_rdy        <= 0;
                         cfg_read_done <= 1;
                         rx_state      <= RX_IDLE;
                     end
                 endcase
             end
             else begin
-                rx_packet_rdy <= 1;
+                rx_rdy <= 1;
             end
         end
         RX_CFG_SYN: begin
@@ -264,7 +282,7 @@ always @(posedge clk) begin
                 cfg_addr      <= 0;
                 cfg_value     <= 0;
                 cfg_byte      <= MAX_CFG_BYTE;
-                rx_packet_rdy <= 0;
+                rx_rdy        <= 0;
                 rx_state      <= RX_IDLE;
             end
             else if(rx_packet_rdy && rx_packet_vld) begin
@@ -294,14 +312,14 @@ always @(posedge clk) begin
                         cfg_read_done   <= 1;
                     end
                     default: begin
-                        rx_packet_rdy <= 0;
+                        rx_rdy        <= 0;
                         cfg_read_done <= 1;
                         rx_state      <= RX_IDLE;
                     end
                 endcase
             end
             else begin
-                rx_packet_rdy <= 1;
+                rx_rdy <= 1;
             end
         end
         RX_METRIC: begin
@@ -316,7 +334,7 @@ always @(posedge clk) begin
                     metric_read <= 1;
                 end
                 else begin
-                    rx_packet_rdy <= 1;
+                    rx_rdy <= 1;
                 end
             end
         end
@@ -347,7 +365,7 @@ always @(posedge clk) begin
         cfg_value     <= 0;
         cfg_synapse   <= 0;
         cfg_byte      <= MAX_CFG_BYTE;
-        rx_packet_rdy <= 1;
+        rx_rdy        <= 1;
         cfg_read_done <= 0;
         rx_opcode     <= 0;
         rx_state      <= RX_IDLE;
@@ -385,7 +403,7 @@ always_ff @(posedge clk) begin
         tx_write_bytes   <= 0;
     end
     else begin
-        tx_state_reg <= tx_state;
+        tx_state_reg     <= tx_state;
 
         ack_sent         <= ack_sent_sig;
         time_sent        <= time_sent_sig;
@@ -393,20 +411,20 @@ always_ff @(posedge clk) begin
         output_fire_sent <= out_fire_sent_sig;
 
         // Transmit control
-        if(tx_state == TX_IDLE) begin
+        if(tx_packet_vld && ~tx_packet_rdy) begin
+            tx_packet_data <= tx_packet_data;
+            tx_packet_vld  <= 1;
+            tx_write_bytes <= tx_write_bytes;
+        end
+        else if(tx_send) begin
+            tx_packet_data <= tx_data;
+            tx_packet_vld  <= 1;
+            tx_write_bytes <= tx_write_bytes + 1;
+        end
+        else begin
             tx_packet_data <= 0;
             tx_packet_vld  <= 0;
             tx_write_bytes <= 0;
-        end
-        else if(tx_packet_rdy && tx_send) begin
-            tx_packet_data <= tx_data;
-            tx_packet_vld  <= 1;
-            tx_write_bytes <= tx_write_bytes + 1; 
-        end
-        else begin
-            tx_packet_data <= tx_packet_data;
-            tx_packet_vld  <= 0;
-            tx_write_bytes <= tx_write_bytes;
         end
     end
 end
@@ -446,17 +464,19 @@ always_comb begin
     time_sent_sig     = 0;
     metric_sent_sig   = 0;
     out_fire_sent_sig = 0;
-    
+
     step_send = time_update && (!time_remaining || output_fire_waiting);
 
     case(tx_state_reg)
 
         TX_IDLE: begin
-            if(step_send)                tx_state = TX_STEP;
-            else if(output_fire_waiting) tx_state = TX_FIRE;
-            else if(metric_send)         tx_state = TX_METRIC;
-            else if(cfg_done)            tx_state = TX_ACK_CFG;
-            else if(clear_done)          tx_state = TX_ACK_CLR;
+            if(tx_packet_vld)                                 tx_state = TX_IDLE; // wait until vld goes low
+            else if(step_send && !time_sent)                  tx_state = TX_STEP;
+            else if(output_fire_waiting && !output_fire_sent) tx_state = TX_FIRE;
+            else if(metric_send && !metric_sent)              tx_state = TX_METRIC;
+            else if(cfg_done && !ack_sent)                    tx_state = TX_ACK_CFG;
+            else if(clear_done && !ack_sent)                  tx_state = TX_ACK_CLR;
+            else                                              tx_state = TX_IDLE;
         end
 
         TX_FIRE: begin
@@ -469,7 +489,8 @@ always_comb begin
             endcase
 
             // end of state
-            if(!tx_send && output_fire_sent) tx_state = TX_IDLE;
+            //if(!tx_send && output_fire_sent) tx_state = TX_IDLE;
+            if(!tx_send) tx_state = TX_IDLE;
         end
 
         TX_STEP: begin
@@ -485,7 +506,8 @@ always_comb begin
             endcase
 
             // end of state
-            if(!tx_send && time_sent) tx_state = TX_IDLE;
+            //if(!tx_send && time_sent) tx_state = TX_IDLE;
+            if(!tx_send) tx_state = TX_IDLE;
         end
 
         TX_METRIC: begin
@@ -499,7 +521,8 @@ always_comb begin
             endcase
 
             // end of state
-            if(!tx_send && metric_sent && !metric_read) tx_state = TX_IDLE;
+            //if(!tx_send && metric_sent && !metric_read) tx_state = TX_IDLE;
+            if(!tx_send) tx_state = TX_IDLE;
         end
 
         TX_ACK_CFG: begin
@@ -507,11 +530,12 @@ always_comb begin
             ack_sent_sig = ~tx_send;
 
             case(tx_write_bytes)
-                0: tx_data  = 8'b01110000;
+                0: tx_data  = 8'b00011000;
             endcase
 
             // end of state
-            if(!tx_send && ack_sent) tx_state = TX_IDLE;
+            //if(!tx_send && ack_sent) tx_state = TX_IDLE;
+            if(!tx_send) tx_state = TX_IDLE;
         end
 
         TX_ACK_CLR: begin
@@ -519,13 +543,14 @@ always_comb begin
             ack_sent_sig = ~tx_send;
 
             case(tx_write_bytes)
-                0: tx_data  = 8'b00001100;
+                0: tx_data  = 8'b00000100;
             endcase
 
             // end of state
-            if(!tx_send && ack_sent) tx_state = TX_IDLE;
+            //if(!tx_send && ack_sent) tx_state = TX_IDLE;
+            if(!tx_send) tx_state = TX_IDLE;
         end
-        
+
         default: begin
             tx_state = TX_IDLE;
         end

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <vector>
 #include <fstream>
 #include <cstdint>
 #include <deque>
@@ -10,8 +11,8 @@ class FakeFifo
 {
     public:
         /* true = input to verilog, false = output from verilog */
-        FakeFifo(uint8_t *clk_, uint8_t *rdy_, uint8_t *vld_, T *data_, bool dir_, bool rio_) : 
-            m_dir(dir_), random_io(rio_), clk(clk_), rdy(rdy_), vld(vld_), data_port(data_) 
+        FakeFifo(uint8_t *clk_, uint8_t *rdy_, uint8_t *vld_, T *data_, bool dir_, bool rio_) :
+            m_dir(dir_), random_io(rio_), clk(clk_), rdy(rdy_), vld(vld_), data_port(data_)
         {
             fifo_empty = true;
             fifo_full  = false;
@@ -65,7 +66,7 @@ class FakeFifo
             T item;
             char *buf = reinterpret_cast<char *>(&item);
             std::ofstream file(fname);
-            
+
             while(!empty())
             {
                 item = pop();
@@ -75,7 +76,8 @@ class FakeFifo
 
         bool full() const
         {
-            return fifo_full;
+            //return fifo_full;
+            return m_data.size() >= max_size;
         }
 
         bool empty() const
@@ -87,7 +89,7 @@ class FakeFifo
         {
             return m_data.size();
         }
-        
+
         void eval(uint8_t clk, uint8_t rst)
         {
             if(rst)
@@ -104,6 +106,26 @@ class FakeFifo
             }
             else
             {
+
+                if(clk)
+                {
+                    if(m_dir)
+                    {
+                        *vld = !empty();
+                    }
+                    else
+                    {
+                        *rdy = !full();
+                    }
+
+                    if(*rdy && *vld)
+                    {
+                        if(m_dir) *data_port = pop();
+                        else push(*data_port);
+                    }
+                }
+
+                /*
                 if(clk && *rdy && *vld)
                 {
                     if(m_dir)
@@ -112,7 +134,7 @@ class FakeFifo
                     }
                     else
                     {
-                        push(*data_port); 
+                        push(*data_port);
                     }
                 }
                 else
@@ -123,9 +145,18 @@ class FakeFifo
                     }
                     else
                     {
-                        *rdy = true;
+                        if(m_data.size() >= max_size)
+                        {
+                            *rdy = false;
+                        }
+                        else
+                        {
+                            *rdy = true;
+
+                        }
                     }
                 }
+                */
             }
         }
 
@@ -134,6 +165,7 @@ class FakeFifo
         {
             if(!rst && clk)
             {
+
                 /* data is moved when rdy and vld are asserted */
                 if(*rdy && *vld)
                 {
@@ -164,13 +196,15 @@ class FakeFifo
         /* our data queue */
         std::deque<T> m_data;
 
+        const int max_size = 512;
+
         /* true = input to verilog, false = output from verilog */
         bool    m_dir;
         bool    random_io;
         uint8_t fifo_full;
         uint8_t fifo_empty;
         uint8_t last_flag;
-        
+
         /* pointers into verilator obj */
         uint8_t *clk;
         uint8_t *rdy;

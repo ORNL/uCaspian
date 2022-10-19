@@ -3,7 +3,7 @@ import binascii
 from serial import Serial
 
 def make_clear_cfg():
-    return bytes([8])
+    return bytes([5])
 
 
 def make_clear_act():
@@ -14,11 +14,11 @@ def make_clear_act():
 def make_ncfg(addr, threshold, leak=-1, delay=0, output_en=0, syn_start=0, syn_end=0):
     syn_cnt = syn_end - syn_start
     cfg_byte = (delay << 4) | (output_en << 3) | (leak+1)
-    return bytes([16, addr, threshold, cfg_byte, (syn_start >> 8) & 255, syn_start & 255, syn_cnt])
+    return bytes([8, addr, threshold, cfg_byte, (syn_start >> 8) & 255, syn_start & 255, syn_cnt])
 
 
 def make_scfg(addr, weight, target):
-    return bytes([32, (addr >> 8) & 255, addr & 255, weight, target])
+    return bytes([16, (addr >> 8) & 255, addr & 255, weight, target])
 
 
 def make_step(steps):

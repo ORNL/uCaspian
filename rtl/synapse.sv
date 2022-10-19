@@ -105,52 +105,96 @@ always_ff @(posedge clk) begin
 end
 
 // Synapse Pipeline
+logic [9:0]  incoming_addr;
+logic        incoming_new;
 logic [9:0]  addr_dly;
 logic [15:0] data_dly;
 logic        rd_dly;
+logic  [9:0] blocked_addr;
+logic [15:0] blocked_data;
+logic        blocked;
+
+always_comb config_rd_addr = incoming_addr;
+always_comb config_rd_en   = incoming_new;
 
 always_ff @(posedge clk) begin
     //// Step 1: Get incoming synapse
     if(syn_rdy && syn_vld) begin
-        config_rd_addr <= syn_addr;
-        config_rd_en   <= 1;
+        incoming_addr <= syn_addr;
+        incoming_new  <= 1;
     end
     else begin
-        config_rd_en   <= 0;
+        incoming_new  <= 0;
     end
 
     //// Step 2: Wait for data
-    addr_dly <= config_rd_addr;        
-    rd_dly   <= config_rd_en;
+    if(incoming_new) begin
+        addr_dly <= incoming_addr;        
+        rd_dly   <= incoming_new;
+    end
+    else if((dend_vld && ~dend_rdy) || blocked) begin
+        rd_dly   <= rd_dly;
+    end
+    else begin
+        rd_dly   <= 0;
+    end
+
+    if(dend_vld && ~dend_rdy && rd_dly && ~blocked && incoming_new) begin
+        blocked_addr <= addr_dly;
+        blocked_data <= config_rd_data;
+        blocked      <= 1;
+    end
 
     //// Step 3: Ouptut data
     if(dend_rdy && dend_vld) begin
         dend_vld <= 0;
     end
 
-    if(rd_dly) begin
+    if(blocked) begin
+        if(!(dend_vld && ~dend_rdy)) begin
+            dend_charge <= blocked_data[15:8];
+            dend_addr   <= blocked_data[7:0];
+            dend_vld    <= 1;
+            blocked     <= 0;
+        end
+    end
+    else if(rd_dly) begin
         if(!(dend_vld && ~dend_rdy)) begin
             dend_charge <= config_rd_data[15:8];
             dend_addr   <= config_rd_data[7:0];
             dend_vld    <= 1;
         end
-        else begin
-            rd_dly <= 1; // todo
-        end
     end
 
+    /*
+    if(dend_vld && ~dend_rdy) syn_rdy <= 0;
+    else if(blocked) syn_rdy <= 0;
+    else syn_rdy <= 1;
+    */
+
     if(reset || clear_act || clear_config) begin
-        dend_addr   <= 0;
-        dend_charge <= 0;
-        dend_vld    <= 0;
-        addr_dly    <= 0;
-        rd_dly      <= 0;
+        blocked_addr <= 0;
+        blocked_data <= 0;
+        blocked      <= 0;
+        dend_addr    <= 0;
+        dend_charge  <= 0;
+        dend_vld     <= 0;
+        addr_dly     <= 0;
+        rd_dly       <= 0;
     end
 end
 
 always_comb begin
+    if(dend_vld && ~dend_rdy) syn_rdy = 0;
+    else if(blocked) syn_rdy = 0;
+    else syn_rdy = 1;
+end
+
+/*
+always_comb begin
     syn_rdy = ~dend_vld && ~rd_dly && ~config_rd_en;
 end
+*/
 
 /*
 always_comb begin
@@ -161,7 +205,7 @@ end
 */
 
 always_ff @(posedge clk) begin
-    step_done <= ~dend_vld && ~syn_vld && ~config_rd_en && ~rd_dly;
+    step_done <= ~dend_vld && ~syn_vld && ~config_rd_en && ~rd_dly && ~blocked;
 end
 
 endmodule

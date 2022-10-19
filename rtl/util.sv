@@ -63,7 +63,7 @@ always @(posedge clk) begin
         if (counter == 0) begin
             out <= 1;
             counter <= N - 1;
-        end 
+        end
         else begin
             counter <= counter - 1;
         end
@@ -80,7 +80,9 @@ module fifo(
     output logic [WIDTH-1:0]  read_data,
     output logic              almost_full,
     output logic              empty,
-    output logic              full
+    output logic              full,
+    output logic [7:0]        count,
+    output logic [7:0]        avail,
 );
 parameter WIDTH = 8;
 parameter DEPTH = 512;
@@ -90,10 +92,13 @@ localparam DEPTH_BITS = `CLOG2(DEPTH);
 logic [WIDTH-1:0] bram[0:DEPTH-1];
 logic [DEPTH_BITS-1:0] write_ptr;
 logic [DEPTH_BITS-1:0] read_ptr;
-logic [DEPTH_BITS-1:0] cur_size;
+logic [DEPTH_BITS:0] cur_size;
 
 wire empty_sig = (cur_size == 0);
-wire full_sig  = (cur_size == DEPTH-1);
+wire full_sig  = (cur_size == DEPTH);
+
+always_comb count = cur_size;
+always_comb avail = (DEPTH-cur_size);
 
 always_ff @(posedge clk)
     almost_full <= (cur_size >= DEPTH-10);
@@ -158,9 +163,9 @@ endmodule
 
 
 module d_flipflop(
-    input       clk, 
-    input       reset, 
-    input       d_in, 
+    input       clk,
+    input       reset,
+    input       d_in,
     output reg  d_out
 );
 
@@ -176,9 +181,9 @@ endmodule
 
 
 module d_flipflop_pair(
-    input      clk, 
-    input      reset, 
-    input      d_in, 
+    input      clk,
+    input      reset,
+    input      d_in,
     output reg d_out
 );
 wire   intermediate;
@@ -197,9 +202,9 @@ endmodule
  * longer.
  */
 module pulse_stretcher(
-    input       clk, 
-    input       reset, 
-    input       in, 
+    input       clk,
+    input       reset,
+    input       in,
     output reg  out
 );
 parameter BITS = 20;
@@ -332,7 +337,7 @@ always @(posedge mclk) begin
             serial_r <= 0;
             //ready <= 1;
             ready    <= !rts;
-        end 
+        end
         else begin
             serial_r <= !shiftreg[0];
         end
@@ -359,11 +364,11 @@ endmodule
  */
 
 module uart_rx(
-    input               mclk, 
-    input               reset, 
+    input               mclk,
+    input               reset,
     input               baud_x4,
     input               serial,
-    output logic [7:0]  data, 
+    output logic [7:0]  data,
     output logic        data_strobe
 );
 
@@ -378,7 +383,7 @@ d_flipflop_pair input_dff(mclk, reset, serial, serial_sync);
  */
 logic [8:0]  shiftreg;
 logic [5:0]  state;
-logic        data_strobe;
+/* logic        data_strobe; */
 wire  [3:0]  bit_count = state[5:2];
 wire  [1:0]  bit_phase = state[1:0];
 
@@ -518,7 +523,7 @@ wire [7:0] read_data;
 wire fifo_almost_full;
 
 // cts is active low
-always_ff @(posedge clk) 
+always_ff @(posedge clk)
     cts <= fifo_almost_full;
 
 fifo #(.DEPTH(FIFO_DEPTH), .WIDTH(8)) buffer(
