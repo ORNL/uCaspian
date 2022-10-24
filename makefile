@@ -10,61 +10,62 @@ INCLUDE := include
 VERILATOR_OUT = vout
 BUILD := build
 
-# Sources
-RTL_SOURCES := $(wildcard $(RTL)/*.sv)
-CPP_SOURCES := $(wildcard $(SRC)/*.cpp)
+# Core sources
+UCASPIAN_RTL = $(wildcard $(RTL)/*.sv)
 
-# Device Parameters
-FAMILY-upduino ?= ice40
-DEVICE-upduino ?= up5k
-FOOTPRINT-upduino ?= sg48
-PINS-upduino ?= pins/upduino_v2.pcf
-TOP-upduino ?= $(basename upduino_top.sv)
-FREQ-upduino ?= 24
+# IP sources
+AXI_STREAM_RTL = $(wildcard ip/axi_stream/*.v  ip/axi_stream/*.sv)
+AXIS_CLOCK_CONVERTER_RTL = $(wildcard ip/axis_clock_converter/*.sv)
+ASYNC_FIFO_RTL = ip/dual_clock_async_fifo_design/dual_clock_async_fifo_design.sv
+PULSE_STRETCHER_RTL = ip/osresearch/pulse_stretcher.v
+PWM_RTL = ip/osresearch/pwm.v
+DIVIDE_BY_N_RTL = ip/osresearch/divide_by_n.v
+UART_RTL = ip/osresearch/uart.sv ip/osresearch/fifo.sv
+SPI_RTL = ip/spi/spi_v4.sv ip/osresearch/fifo.sv
 
-FAMILY-upduino_uart ?= ice40
-DEVICE-upduino_uart ?= up5k
-FOOTPRINT-upduino_uart ?= sg48
-PINS-upduino_uart ?= pins/upduino_v2.pcf
-TOP-upduino_uart ?= $(basename upduino_uart_top.sv)
-FREQ-upduino_uart ?= 24
+DEV_R0_TOP_RTL = $(AXI_STREAM_RTL)
+UPDUINO_SPI_TOP_RTL = \
+	$(SPI_RTL) \
+	$(AXIS_CLOCK_CONVERTER_RTL) \
+	$(ASYNC_FIFO_RTL) \
+	$(PULSE_STRETCHER_RTL) \
+	$(PWM_RTL) \
+	$(DIVIDE_BY_N_RTL)
+UPDUINO_TOP_RTL = \
+	$(AXI_STREAM_RTL) \
+	$(PULSE_STRETCHER_RTL) \
+	$(PWM_RTL) \
+	$(DIVIDE_BY_N_RTL)
+UPDUINO_UART_TOP_RTL = \
+	$(UART_RTL) \
+	$(PULSE_STRETCHER_RTL) \
+	$(PWM_RTL) \
+	$(DIVIDE_BY_N_RTL)
 
-FAMILY-upduino_spi_loop ?= ice40
-DEVICE-upduino_spi_loop ?= up5k
-FOOTPRINT-upduino_spi_loop ?= sg48
-PINS-upduino_spi_loop ?= pins/upduino_v2.pcf
-TOP-upduino_spi_loop ?= $(basename upduino_spi_top_loop.sv)
-FREQ-upduino_spi_loop ?= 24
-
-FAMILY-upduino_spi ?= ice40
-DEVICE-upduino_spi ?= up5k
-FOOTPRINT-upduino_spi ?= sg48
-PINS-upduino_spi ?= pins/upduino_v2.pcf
-TOP-upduino_spi ?= $(basename upduino_spi_top.sv)
-FREQ-upduino_spi ?= 24
-
-FAMILY-devr0 ?= ice40
-DEVICE-devr0 ?= up5k
-FOOTPRINT-devr0 ?= sg48
-PINS-devr0 ?= pins/dev_r0.pcf
-TOP-devr0 ?= $(basename dev_r0_top.sv)
-FREQ-devr0 ?= 25
+CPP_SOURCES = $(wildcard $(SRC)/*.cpp)
 
 # Select the board
-# dev_r0
-#USB_DEV ?= 1-1:1.0
-#BOARD ?= devr0
-## UPduino V2 or V3
-# USB_DEV ?= 1-1:1.0
 USB_DEV ?= 1-1.4:1.0
-BOARD ?= upduino_uart
+BOARD ?= upduino
 
-# Select parameters based on the board
-DEVICE := $(DEVICE-$(BOARD))
-FOOTPRINT := $(FOOTPRINT-$(BOARD))
-PINS := $(PINS-$(BOARD))
-TOP := $(TOP-$(BOARD))
-FREQ = $(FREQ-$(BOARD))
+# Device parameters
+ifeq ($(BOARD),upduino)
+	TOP ?= upduino_top
+	FAMILY = ice40
+	DEVICE = up5k
+	PACKAGE = sg48
+	PCF = upduino_v2.pcf
+	FREQ = 24
+else ifeq ($(BOARD),dev_r0)
+	TOP = dev_r0_top
+	FAMILY = ice40
+	DEVICE = up5k
+	PACKAGE = sg48
+	PCF = dev_r0.pcf
+	FREQ = 25
+else ifneq ($(BOARD),mimas)
+	$(error Unsupported board)
+endif
 
 # Top module for uCaspian Core
 VERILATOR_TOP = ucaspian
@@ -72,7 +73,7 @@ VERILATOR_CPP = V$(VERILATOR_TOP).cpp
 
 # Select EDA programs
 YOSYS ?= yosys
-PNR ?= nextpnr-$(FAMILY-$(BOARD))
+PNR ?= nextpnr-$(FAMILY)
 VERILATOR ?= verilator
 VIVADO ?= vivado
 
@@ -93,32 +94,58 @@ VERILATOR_FLAGS = -Wno-fatal -O3
 # Waveform traces
 VERILATOR_FLAGS += --trace-fst
 
-.PHONY: all flash gui test lint clean
+TARGETS = $(filter-out mimas_top,$(basename $(notdir $(wildcard syn/rtl/*_top.sv))))
 
-all: $(BUILD)/$(TOP).bin
+.PHONY: help flash prog gui test lint clean $(TARGETS)
+
+help:
+	@echo
+	@echo ================================================================
+	@echo " uCaspian"
+	@echo
+	@for target in $(TARGETS); do \
+		echo " make $$target"; \
+	done
+	@echo ================================================================
+	@echo
+
+$(TARGETS): %: $(BUILD)/%.bin
+
+all: $(TARGETS)
+
 flash: $(TOP).flash
+
 prog: $(TOP).prog
+
 gui: $(TOP).gui
+
 test: $(VERILATOR_OUT)/Vucaspian
 
 $(BUILD):
 	mkdir -p $(BUILD)
 
-# Synthesize the design for
-$(BUILD)/%.json: $(RTL)/%.sv | $(BUILD)
+# Design specific sources and constraints
+$(BUILD)/dev_r0_top.json: $(DEV_R0_TOP_RTL)
+$(BUILD)/dev_r0_top.asc: PCF = dev_r0.pcf
+
+$(BUILD)/upduino_spi_top.json: $(UPDUINO_SPI_TOP_RTL)
+$(BUILD)/upduino_top.json: $(UPDUINO_TOP_RTL)
+$(BUILD)/upduino_uart_top.json: $(UPDUINO_UART_TOP_RTL)
+
+# Synthesize the design
+$(BUILD)/%.json: syn/rtl/%.sv $(UCASPIAN_RTL) | $(BUILD)
 	$(YOSYS) \
-		-p 'read_verilog -sv $<' \
+		-p 'read_verilog -sv $^' \
 		-p 'synth_ice40 -top top -json $@' \
-		-E .$(TOP).d
 
 # Place & Route the synthesized netlist
-$(BUILD)/%.asc: $(PINS) $(BUILD)/%.json | $(BUILD)
+$(BUILD)/%.asc: $(BUILD)/%.json | syn/pnr/$(PCF) $(BUILD)
 	$(PNR) \
 		--$(DEVICE) \
 		--placer heap \
-		--package $(FOOTPRINT) \
+		--package $(PACKAGE) \
 		--asc $@ \
-		--pcf $(PINS) \
+		--pcf syn/pnr/$(PCF) \
 		--freq $(FREQ) \
 		--json $(basename $@).json
 
@@ -137,21 +164,22 @@ $(BUILD)/%.bin: $(BUILD)/%.asc | $(BUILD)
 
 # Open the Place & Route GUI to inspect the design
 %.gui: $(BUILD)/%.json
-	$(PNR) --gui --$(DEVICE) --package $(FOOTPRINT) --pcf $(PINS) --freq $(FREQ) --json $<
+	$(PNR) --gui --$(DEVICE) --package $(PACKAGE) --pcf $(PINS) --freq $(FREQ) --json $<
 
 # Convert Verilog to C++ with Verilator
-$(VERILATOR_OUT)/Vucaspian: $(RTL_SOURCES) $(SRC)/ucaspian.cpp
+$(VERILATOR_OUT)/Vucaspian: $(UCASPIAN_RTL) $(SRC)/ucaspian.cpp
 	$(VERILATOR) \
 	    $(VERILATOR_FLAGS) \
 	    --Mdir $(VERILATOR_OUT) \
 	    -I$(RTL) -I$(INCLUDE) \
 	    -CFLAGS '-I../$(INCLUDE) $(CFLAGS)' \
-	    --cc $(RTL)/$(VERILATOR_TOP).sv \
+		--top $(VERILATOR_TOP) \
+	    --cc $(UCASPIAN_RTL) \
 	    --exe $(CPP_SOURCES)
 	$(MAKE) -C $(VERILATOR_OUT) -f V$(VERILATOR_TOP).mk V$(VERILATOR_TOP)
 
 $(BUILD)/mimas_ucaspian.bit:
-	$(VIVADO) -mode batch -nolog -nojournal -source scripts/mimas.tcl
+	$(VIVADO) -mode batch -nolog -nojournal -source syn/mimas.tcl
 
 mimas_bit: $(BUILD)/mimas_ucaspian.bit
 
@@ -160,9 +188,7 @@ mimas_prog: $(BUILD)/mimas_ucaspian.bit
 
 # Have verilator lint the design
 lint:
-	$(VERILATOR) -Wall -I$(RTL) --lint-only $(RTL)/$(VERILATOR_TOP).sv
+	$(VERILATOR) -Wall -I$(RTL) --lint-only $(UCASPIAN_RTL)
 
 clean:
 	$(RM) -rf $(BUILD) $(VERILATOR_OUT)
-
--include .*.d

@@ -6,10 +6,6 @@
  * calculating and updating neuron charge leak, and determining
  * when a neuron should fire based upon a configurable threshold.
  */
-`ifndef uCaspian_Neuron_SV
-`define uCaspian_Neuron_SV
-
-`include "dp_ram.sv"
 
 module ucaspian_neuron(
     input               clk,
@@ -360,4 +356,3 @@ always_ff @(posedge clk) begin
 end
 
 endmodule
-`endif

@@ -6,10 +6,6 @@
  * FPGA: Lattice ice40up5k
  * Comm Interface: FTDI 2232H USB Bridge
  */
-`include "ucaspian.sv"
-`include "util.sv"
-`include "axi_stream/axis_ft245.sv"
-`include "axi_stream/axis_fifo.v"
 
 module top(
     input  clk_i, 

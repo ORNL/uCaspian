@@ -1,19 +1,22 @@
 /* uCaspian for Lattice ice40
  * Parker Mitchell, 2019
+ * Aaron Young, 2022
  *
  * Build Tools: Project Icestorm + Yosys + NextPnR
  * Board: Gnarly Grey Upduino v2
  * FPGA: Lattice ice40up5k
  * Comm Interface: FTDI 232H USB Bridge
  */
-`define UART_IS_NEEDED
-
-`include "ucaspian.sv"
-`include "util.sv"
-/* `include "axi_stream/axis_ft245.sv" */
-/* `include "axi_stream/axis_fifo.v" */
 
 module top(
+   input  gpio_2,  // SCLK
+   input  gpio_46, // MOSI
+   output gpio_47, // MISO
+   input  gpio_45, // SSEL
+   // output  gpio_3, // System Clock Debug Output
+   // output  gpio_32, // Debug Port 1
+   // output  gpio_27, // Debug Port 2
+   // output  gpio_26, // Debug Port 3
    // inout  gpio_37, // D0
    // inout  gpio_31, // D1
    // inout  gpio_35, // D2
@@ -38,6 +41,8 @@ module top(
 );
    assign spi_cs = 1; // it is necessary to turn off the SPI flash chip
 
+   // assign gpio_3 = clk_sys;
+
    //// System reset ////
 
    logic reset;
@@ -46,7 +51,12 @@ module top(
 
    logic [31:0] counter;
    initial counter = 0;
+   // always_ff @(posedge clk_sys) begin
    always_ff @(posedge clk_sys) begin
+      if (spi_reset) begin
+         reset <= 1;
+         counter <= 0;
+      end
       if (counter[26]) begin
          reset <= 0;
       end
@@ -56,7 +66,7 @@ module top(
    //// Clocks ////
 
    /* logic clk_48;  // Generated Clock */
-   logic clk_sys; // System Clock
+   logic clk_sys; // 24 MHz System Clock
    logic clk_1;   // 3 Mbaud serial clock
    logic clk_4;   // 12 Mbaud serial clock
 
@@ -81,68 +91,60 @@ module top(
    // This generates the system clock at 24 MHz.
    /* divide_by_n #(.N( 2)) divclk(clk_48, reset, clk_sys); */
 
-   //// UART to AXIS ////
-
-   logic [7:0] read_data;
-   logic read_rdy, read_vld;
-   logic read_fifo_enable;
-   logic read_fifo_empty;
-   logic read_fifo_full;
-
-   logic [7:0] write_data;
-   logic write_rdy, write_vld;
-   logic write_fifo_enable;
-   logic write_fifo_full;
-
-   uart_tx_fifo
-   #(
-      .FIFO_DEPTH(1024)
-   )
-   uart_fifo_outgoing
+   //// SPI ////
+   logic spi_led;
+   logic spi_reset;
+   logic [7:0] spi_read_data;
+   logic spi_read_vld;
+   logic spi_read_rdy;
+   logic [7:0] spi_write_data;
+   logic spi_write_vld;
+   logic spi_write_rdy;
+   // SPI_slave #(.DEPTH(128), .WIDTH(8)) SPI_slave_inst
+   // SPI_slave_v2 #(.DEPTH(128), .WIDTH(8)) SPI_slave_inst
+   SPI_slave_v4 #(.DEPTH(16), .WIDTH(8)) SPI_slave_inst
    (
       .clk(clk_sys),
       .reset(reset),
-      .baud_x1(clk_1),
-      .data(write_data),
-      .write_enable(write_fifo_enable),
-      .rts(1'b0),
-      .fifo_full(write_fifo_full),
-      .fifo_empty(),
-      .fifo_almost_full(),
-      .serial(serial_txd)
-   );
-   always_comb write_fifo_enable = write_rdy & write_vld;
-   always_comb write_rdy = ~write_fifo_full;
+      .LED(spi_led),
+      .LED1(),
+      .LED2(),
+      .LED3(),
+      .spi_reset(spi_reset),
 
-   uart_rx_fifo
-   #(
-      .FIFO_DEPTH(1024)
-   )
-   uart_fifo_incoming
-   (
-      .clk(clk_sys),
-      .reset(reset),
-      .baud_x4(clk_4),
-      .read_enable(read_fifo_enable),
-      .data(read_data),
-      .fifo_full(read_fifo_full),
-      .fifo_empty(read_fifo_empty),
-      .cts(),
-      .serial(serial_rxd)
-   );
-   always_comb read_fifo_enable = read_rdy & read_vld;
-   always_comb read_vld = ~read_fifo_empty;
+      .SCK(gpio_2),
+      .MOSI(gpio_46),
+      .MISO(gpio_47),
+      .SSEL(gpio_45),
 
-   // Full Error Check
-   logic full_err;
-   initial full_err = 0;
-   always_ff @(posedge clk_sys or posedge reset)
-      if (reset)
-         full_err <= 0;
-      else begin
-         if (read_fifo_full)
-            full_err <= 1'b1;
-      end
+      .read_data(spi_read_data),
+      .read_vld(spi_read_vld),
+      .read_rdy(spi_read_rdy),
+      .write_data(spi_write_data),
+      .write_vld(spi_write_vld),
+      .write_rdy(spi_write_rdy)
+   );
+
+   // SPI_slave_v3 #(.DEPTH(128), .WIDTH(8)) SPI_slave_inst
+   // (
+   //    .clk_logic(clk_1),
+   //    .clk_comm(clk_sys),
+   //    .reset(reset),
+   //    .LED(spi_led),
+   //    .spi_reset(spi_reset),
+
+   //    .SCK(gpio_2),
+   //    .MOSI(gpio_46),
+   //    .MISO(gpio_47),
+   //    .SSEL(gpio_45),
+
+   //    .read_data(spi_read_data),
+   //    .read_vld(spi_read_vld),
+   //    .read_rdy(spi_read_rdy),
+   //    .write_data(spi_write_data),
+   //    .write_vld(spi_write_vld),
+   //    .write_rdy(spi_write_rdy)
+   // );
 
    //// uCaspian ////
 
@@ -150,30 +152,26 @@ module top(
        .sys_clk(clk_sys),
        .reset(reset),
 
-       .read_data(read_data),
-       .read_vld(read_vld),
-       .read_rdy(read_rdy),
+       .read_data(spi_read_data),
+       .read_vld(spi_read_vld),
+       .read_rdy(spi_read_rdy),
 
-       .write_data(write_data),
-       .write_vld(write_vld),
-       .write_rdy(write_rdy),
+       .write_data(spi_write_data),
+       .write_vld(spi_write_vld),
+       .write_rdy(spi_write_rdy),
 
        .led_0(),
        .led_1(),
        .led_2(),
-       .led_3(led_3)
+       .led_3()
    );
-
-   /* always_comb write_data = read_data; */
-   /* always_comb write_vld = read_vld; */
-   /* always_comb read_rdy = write_rdy; */
 
    //// LEDs ////
    logic led_0, led_1, led_2, led_3;
 
-   always_comb led_0 = full_err; // Red LED
-   always_comb led_1 = write_fifo_enable; // Green LED
-   always_comb led_2 = read_fifo_enable; // Blue LED
+   always_comb led_0 = spi_led; // Red LED
+   always_comb led_1 = 1'b0; // Green LED
+   always_comb led_2 = 1'b0; // Blue LED
 
    wire pwm_led, r_pulse, g_pulse, b_pulse;
    pwm pwm_driver(clk_sys, 1, pwm_led);
@@ -182,7 +180,8 @@ module top(
    pulse_stretcher #(.BITS(24)) green_led_pulse(clk_sys, reset, led_1, g_pulse);
    pulse_stretcher #(.BITS(24)) blue_led_pulse(clk_sys, reset, led_2, b_pulse);
 
-   assign led_r = !( (r_pulse && pwm_led) || reset);
+   // assign led_r = !(r_pulse && pwm_led);
+   assign led_r = !(led_0);
    assign led_g = !(g_pulse && pwm_led);
    assign led_b = !(b_pulse && pwm_led);
 

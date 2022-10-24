@@ -1,7 +1,3 @@
-`include "util.sv"
-`include "axis_clock_converter.sv"
-`include "dual_clock_async_fifo_design.sv"
-
 module SPI_slave_v4(
   // Base signals
   input  clk,
@@ -27,8 +23,8 @@ module SPI_slave_v4(
 parameter WIDTH = 8;
 parameter DEPTH = 16;
 
-localparam WIDTH_BITS = `CLOG2(WIDTH);
-localparam DEPTH_BITS = `CLOG2(DEPTH);
+localparam WIDTH_BITS = $clog2(WIDTH);
+localparam DEPTH_BITS = $clog2(DEPTH);
 
 // Default spi_reset to 0
 initial spi_reset = 0;

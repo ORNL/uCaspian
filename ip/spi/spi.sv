@@ -1,7 +1,6 @@
 /*
  * Parts from: https://www.fpga4fun.com/SPI2.html
  */
-`include "util.sv"
 
 module SPI_slave(
   // Base signals

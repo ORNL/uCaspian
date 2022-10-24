@@ -5,8 +5,6 @@
  * to all of the downstream synapses. It must handle several
  * parallel synapse units coherently -- ideally maximizing utilization.
  */
-`ifndef uCaspian_Fire_Dispatch_SV
-`define uCaspian_Fire_Dispatch_SV
 
 /* A note: The ports are not represented as an unpacked vector
  * for synthesis compatibility reasons. It is easier to just
@@ -126,5 +124,3 @@ always_ff @(posedge clk) begin
 end
 
 endmodule
-
-`endif

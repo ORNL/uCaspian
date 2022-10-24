@@ -6,10 +6,6 @@
  * FPGA: Xilinx Artix7 50T (XC7A50T-1FGG484C)
  * Comm Interface: FTDI 2232H USB Bridge
  */
-`include "ucaspian.sv"
-`include "util.sv"
-`include "axi_stream/axis_ft245.sv"
-`include "axi_stream/axis_fifo.v"
 
 module top(
     input  clk1, 

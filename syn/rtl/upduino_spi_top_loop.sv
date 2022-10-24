@@ -1,6 +1,5 @@
 /* uCaspian for Lattice ice40
  * Parker Mitchell, 2019
- * Aaron Young, 2022
  *
  * Build Tools: Project Icestorm + Yosys + NextPnR
  * Board: Gnarly Grey Upduino v2
@@ -8,24 +7,15 @@
  * Comm Interface: FTDI 232H USB Bridge
  */
 
-`include "ucaspian.sv"
-`include "util.sv"
-// `include "spi.sv"
-// `include "spi_v2.sv"
-// `include "spi_v3.sv"
-`include "spi_v4.sv"
-/* `include "axi_stream/axis_ft245.sv" */
-/* `include "axi_stream/axis_fifo.v" */
-
 module top(
    input  gpio_2,  // SCLK
    input  gpio_46, // MOSI
    output gpio_47, // MISO
    input  gpio_45, // SSEL
-   // output  gpio_3, // System Clock Debug Output
-   // output  gpio_32, // Debug Port 1
-   // output  gpio_27, // Debug Port 2
-   // output  gpio_26, // Debug Port 3
+   output  gpio_3, // System Clock Debug Output
+   output  gpio_32, // Debug Port 1
+   output  gpio_27, // Debug Port 2
+   output  gpio_26, // Debug Port 3
    // inout  gpio_37, // D0
    // inout  gpio_31, // D1
    // inout  gpio_35, // D2
@@ -50,7 +40,7 @@ module top(
 );
    assign spi_cs = 1; // it is necessary to turn off the SPI flash chip
 
-   // assign gpio_3 = clk_sys;
+   assign gpio_3 = clk_sys;
 
    //// System reset ////
 
@@ -116,9 +106,9 @@ module top(
       .clk(clk_sys),
       .reset(reset),
       .LED(spi_led),
-      .LED1(),
-      .LED2(),
-      .LED3(),
+      .LED1(gpio_32),
+      .LED2(gpio_27),
+      .LED3(gpio_26),
       .spi_reset(spi_reset),
 
       .SCK(gpio_2),
@@ -155,25 +145,9 @@ module top(
    //    .write_rdy(spi_write_rdy)
    // );
 
-   //// uCaspian ////
-
-   ucaspian ucaspian_inst(
-       .sys_clk(clk_sys),
-       .reset(reset),
-
-       .read_data(spi_read_data),
-       .read_vld(spi_read_vld),
-       .read_rdy(spi_read_rdy),
-
-       .write_data(spi_write_data),
-       .write_vld(spi_write_vld),
-       .write_rdy(spi_write_rdy),
-
-       .led_0(),
-       .led_1(),
-       .led_2(),
-       .led_3()
-   );
+   assign spi_write_data = spi_read_data;
+   assign spi_write_vld  = spi_read_vld;
+   assign spi_read_rdy   = spi_write_rdy;
 
    //// LEDs ////
    logic led_0, led_1, led_2, led_3;

@@ -4,9 +4,6 @@
  * This module finds the first set bit in a bitfield. This is 
  * useful for how uCaspian handles certain activity-driven computation.
  */
-`ifndef uCaspian_Find_Set_Bit_16_SV
-`define uCaspian_Find_Set_Bit_16_SV
-
 
 /* find first set bit (8 -> 3 priority encoder)
  * 
@@ -153,4 +150,3 @@ end
 
 endmodule
 */
-`endif

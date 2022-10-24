@@ -1,5 +1,3 @@
-`include "synchronizer.sv"
-
 module axis_clock_converter(
     input  reset,
 
