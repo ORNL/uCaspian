@@ -5,8 +5,8 @@
 
 # Directories
 RTL := rtl
-SRC := src
-INCLUDE := include
+SRC := sim/src
+INCLUDE := sim/include
 VERILATOR_OUT = vout
 BUILD := build
 
@@ -172,7 +172,7 @@ $(VERILATOR_OUT)/Vucaspian: $(UCASPIAN_RTL) $(SRC)/ucaspian.cpp
 	    $(VERILATOR_FLAGS) \
 	    --Mdir $(VERILATOR_OUT) \
 	    -I$(RTL) -I$(INCLUDE) \
-	    -CFLAGS '-I../$(INCLUDE) $(CFLAGS)' \
+		-CFLAGS '-I../$(INCLUDE) $(CFLAGS)' \
 		--top $(VERILATOR_TOP) \
 	    --cc $(UCASPIAN_RTL) \
 	    --exe $(CPP_SOURCES)
