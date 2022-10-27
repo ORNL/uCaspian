@@ -29,6 +29,13 @@ A few details:
       source <extracted_location>/oss-cad-suite/environment
       ```
 
+### Install libftdi
+
+On Ubuntu:
+```bash
+sudo apt install libftdi-dev libftdi1-dev
+```
+
 ### Setup upduino dev file and group permissions
 
 Add [rules/upduinov3.rules](rules/upduinov3.rules) to /etc/udev/rules.d on Ubuntu to allow using the upduino without root.
@@ -72,14 +79,6 @@ Verible has useful system verilog linting and formating tools.
     ```bash
     cd processors/caspian
     git clone git@code.ornl.gov:neurohw/ucaspian.git 
-    ```
-
-5. Checkout UPduino branches in the `processors/caspian` and `processors/caspian/ucaspian` repos.
-
-    ```bash
-    git checkout 7ry/new_upduino
-    cd ucaspian
-    git checkout 7ry/new_upduino
     ```
 
 6. Plug in the UPduino and use dmesg to find the ftdi_sio device id
