@@ -22,6 +22,8 @@ PWM_RTL = ip/osresearch/pwm.v
 DIVIDE_BY_N_RTL = ip/osresearch/divide_by_n.v
 UART_RTL = ip/osresearch/uart.sv ip/osresearch/fifo.sv
 SPI_RTL = ip/spi/spi_v4.sv ip/osresearch/fifo.sv
+STREAM_FIFO_RTL = ip/stream/src/stream_fifo.sv
+STREAM_UART_RTL = ip/uart/src/uart.sv ip/uart/src/uart_rx.sv ip/uart/src/uart_tx.sv $(STREAM_FIFO_RTL)
 
 DEV_R0_TOP_RTL = $(AXI_STREAM_RTL)
 UPDUINO_SPI_TOP_RTL = \
@@ -41,6 +43,7 @@ UPDUINO_UART_TOP_RTL = \
 	$(PULSE_STRETCHER_RTL) \
 	$(PWM_RTL) \
 	$(DIVIDE_BY_N_RTL)
+UPDUINOLP_TOP_RTL = $(STREAM_UART_RTL)
 
 CPP_SOURCES = $(wildcard $(SRC)/*.cpp)
 
@@ -128,8 +131,13 @@ $(BUILD):
 $(BUILD)/dev_r0_top.json: $(DEV_R0_TOP_RTL)
 $(BUILD)/dev_r0_top.asc: PCF = dev_r0.pcf
 
+$(BUILD)/upduinolp_top.json: $(UPDUINOLP_TOP_RTL)
+$(BUILD)/upduinolp_top.asc: PCF = upduinolp.pcf
+
 $(BUILD)/upduino_spi_top.json: $(UPDUINO_SPI_TOP_RTL)
+
 $(BUILD)/upduino_top.json: $(UPDUINO_TOP_RTL)
+
 $(BUILD)/upduino_uart_top.json: $(UPDUINO_UART_TOP_RTL)
 
 # Synthesize the design
