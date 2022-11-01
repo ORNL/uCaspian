@@ -1,0 +1,27 @@
+set_frequency clk25 25
+set_frequency clk_hf 24
+set_frequency clk_lf 0.01
+
+# External 25 MHz clock
+set_io -nowarn clk25 20
+
+# Flash CS
+set_io -nowarn -pullup yes -pullup_resistor 100K spi_cs 16
+
+# GPIO
+set_io -nowarn -pullup yes -pullup_resistor 100K en 46 # p0
+set_io -nowarn irq 48 # p4
+
+# GPIO UART
+set_io -nowarn txd 47 # p2
+set_io -nowarn rxd 44 # p3
+
+# USB UART
+#set_io -nowarn txd 23 # d0
+#set_io -nowarn rxd 25 # d1
+
+# LED
+set_io -nowarn led[0] 11
+set_io -nowarn led[1] 12 
+set_io -nowarn led[2] 13 
+set_io -nowarn led[3] 19 

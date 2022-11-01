@@ -44,6 +44,7 @@ UPDUINO_UART_TOP_RTL = \
 	$(PWM_RTL) \
 	$(DIVIDE_BY_N_RTL)
 UPDUINOLP_TOP_RTL = $(STREAM_UART_RTL)
+UCASPIANLP_TOP_RTL = $(STREAM_UART_RTL)
 
 CPP_SOURCES = $(wildcard $(SRC)/*.cpp)
 
@@ -133,6 +134,9 @@ $(BUILD)/dev_r0_top.asc: PCF = dev_r0.pcf
 
 $(BUILD)/upduinolp_top.json: $(UPDUINOLP_TOP_RTL)
 $(BUILD)/upduinolp_top.asc: PCF = upduinolp.pcf
+
+$(BUILD)/ucaspianlp_top.json: $(UCASPIANLP_TOP_RTL)
+$(BUILD)/ucaspianlp_top.asc: PCF = ucaspianlp.pcf
 
 $(BUILD)/upduino_spi_top.json: $(UPDUINO_SPI_TOP_RTL)
 
