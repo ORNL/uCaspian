@@ -97,7 +97,7 @@ VERILATOR_FLAGS = -Wno-fatal -O3
 # Waveform traces
 VERILATOR_FLAGS += --trace-fst
 
-TARGETS = $(filter-out mimas_top,$(basename $(notdir $(wildcard syn/rtl/*_top.sv))))
+TARGETS = $(filter-out mimas_top,$(basename $(notdir $(wildcard syn/top/*_top.sv))))
 
 .PHONY: help flash prog gui test lint clean $(TARGETS)
 
@@ -141,7 +141,7 @@ $(BUILD)/upduino_top.json: $(UPDUINO_TOP_RTL)
 $(BUILD)/upduino_uart_top.json: $(UPDUINO_UART_TOP_RTL)
 
 # Synthesize the design
-$(BUILD)/%.json: syn/rtl/%.sv $(UCASPIAN_RTL) | $(BUILD)
+$(BUILD)/%.json: syn/top/%.sv $(UCASPIAN_RTL) | $(BUILD)
 	$(YOSYS) \
 		-p 'read_verilog -sv $^' \
 		-p 'synth_ice40 -top top -json $@' \
