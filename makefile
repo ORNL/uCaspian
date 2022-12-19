@@ -202,5 +202,8 @@ mimas_prog: $(BUILD)/mimas_ucaspian.bit
 lint:
 	$(VERILATOR) -Wall -I$(RTL) --lint-only $(UCASPIAN_RTL)
 
+verilator_waiver.vlt:
+	$(VERILATOR) -Wall -I$(RTL) --lint-only $(UCASPIAN_RTL) --waiver-output $@
+
 clean:
 	$(RM) -rf $(BUILD) $(VERILATOR_OUT)
