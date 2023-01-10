@@ -6,7 +6,9 @@ PATH := $(MODELSIM_PATH):$(PATH)
 export LM_LICENSE_FILE = $(MODELSIM_LICENSE)
 
 RTL = ../rtl
-SRCS = \
+IP = ../ip
+SRC = \
+	$(IP)/stream/src/stream_fifo.sv \
 	$(RTL)/dp_ram.sv \
 	$(RTL)/find_set_bit.sv \
 	$(RTL)/axon.sv \
@@ -18,7 +20,9 @@ SRCS = \
 	$(RTL)/synapse.sv \
 	$(RTL)/ucaspian_core.sv \
 	$(RTL)/ucaspian.sv \
-	ucaspian_tb.sv
+	$(RTL)/ucaspian_wb.sv \
+	ucaspian_tb.sv \
+	ucaspian_wb_tb.sv \
 
 VLIB = vlib
 VCOM = vcom -2008 -quiet
@@ -28,17 +32,17 @@ VSIM = vsim -batch -quiet
 IVERILOG ?= iverilog
 VVP ?= vvp
 
-.SECONDARY: ucaspian_tb.wlf
-.PHONY: all clean ucaspian_tb_modelsim
+.SECONDARY: ucaspian_tb.wlf ucaspian_wb_tb.wlf
+.PHONY: all clean ucaspian_tb_modelsim ucaspian_wb_tb_modelsim
 
-all: ucaspian_tb.vcd
+all: ucaspian_tb.vcd ucaspian_wb_tb.vcd
 
-test: ucaspian_tb_modelsim
+test: ucaspian_tb_modelsim ucaspian_wb_tb_modelsim
 
 work/_info:
 	$(VLIB) work
 
-work/_lib.qdb: $(SRCS) | work/_info
+work/_lib.qdb: $(SRC) | work/_info
 	$(VLOG) $^
 
 %.wlf: work/_lib.qdb
