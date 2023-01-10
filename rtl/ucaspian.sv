@@ -108,7 +108,7 @@ packet_interface pck_ctrl_inst(
 ucaspian_core core(
     .clk(sys_clk),
     .reset(reset),
-    .enable(1),
+    .enable(1'b1),
 
     .core_active(core_active),
     .ack_sent(ack_sent),
