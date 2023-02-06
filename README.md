@@ -131,6 +131,9 @@ Verible has useful system verilog linting and formating tools.
 
 ## Notes on SPI Versions
 
-- spi.sv - Working 3-bit sync, SPI implementation.
+spi.sv or spi_v4.sv should be used.
+
+- spi.sv    - Working 3-bit sync, SPI implementation.
 - spi_v2.sv - Non-working, SPI clock synchronous implementation.
 - spi_v3.sv - Working 3-bit sync, with separate SPI communication and logic clocks.
+- spi_v4.sv - Working async FIFO for clock sync.
