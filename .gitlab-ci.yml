@@ -29,7 +29,7 @@ deploy_docs-job:
   extends: .deploy_docs_common
   only:
     refs:
-      - main
+      - master
 
 deploy_docs_manual-job:
   extends: .deploy_docs_common
