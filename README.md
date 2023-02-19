@@ -8,13 +8,15 @@ A few details:
 
 - 256 neurons, 4096 synapses
 - 8 bit unsigned neuron thresholds
-- exponential charge leak
+- exponential charge leak (not yet implemented)
 - 8 bit signed synaptic weights
 - no connectivity restrictions
 - variable length packets
 - activity dependent evaluation
 
 ## Installing Open-Source Toolchain
+
+You can either install the [OSS CAD Suite](https://github.com/YosysHQ/oss-cad-suite-build) or use the experimental [Conda EDA](https://github.com/hdl/conda-eda) environment.
 
 ### Install OSS CAD Suite (Required)
 
@@ -31,6 +33,23 @@ A few details:
       source <extracted_location>/oss-cad-suite/environment
       ```
 
+### Anaconda environment (Experimental)
+
+As an alternative to the OSS CAD suite you can use the Conda EDA environment which includes Verible and many of the other open-source EDA tools used in the [ORNL NeuroHW](https://code.ornl.gov/neurohw) ecosystem.
+
+```bash
+conda create -f environment.yml
+conda activate ucaspian
+```
+
+### Install Verible (Optional)
+
+If you did not use the experimental Anaconda environment you may also want to install [Verible](https://github.com/chipsalliance/verible). Verible has useful SystemVerilog linting and formatting tools.
+
+  1. Navigate to project repository. <https://github.com/chipsalliance/verible>
+
+  2. Download release and extract to home directory. The release has bin and share which are both extracted to `~/bin` and `~/share` respectively.
+
 ### Install libftdi
 
 On Ubuntu:
@@ -40,22 +59,14 @@ sudo apt install libftdi-dev libftdi1-dev
 
 ### Setup upduino dev file and group permissions
 
-Add [rules/upduinov3.rules](rules/upduinov3.rules) to /etc/udev/rules.d on Ubuntu to allow using the upduino without root.
+Add [sw/upduinov3.rules](sw/upduinov3.rules) to /etc/udev/rules.d on Ubuntu to allow using the upduino without root.
 
 You also need to be added to the `dialout` group.
 
-### Install Verible (Optional)
-
-Verible has useful system verilog linting and formating tools.
-
-  1. Navigate to project repository. <https://github.com/chipsalliance/verible>
-
-  2. Download release and extract to home directory. The release has bin and share which are both extracted to `~/bin` and `~/share` respectivly.
-
 ## Building and running on UPduino
 
-1. Clone the neuromorphic framework.  
-  
+1. Clone the neuromorphic framework.
+
     ```bash
     git clone git@code.ornl.gov:neuromorphic-computing/framework.git
     ```
@@ -64,48 +75,55 @@ Verible has useful system verilog linting and formating tools.
     git clone git@bitbucket.org:neuromorphic-utk/framework.git
     ```
 
-2. Build the framework environment.
-  
+2. Clone Caspian to processors/caspian.
+
     ```bash
-    bash scripts/create_env.sh
+    git clone git@code.ornl.gov:neuromorphic-computing/caspian.git ./processors/caspian
     ```
 
-3. Source the framework environment
-  
+3. Clone µCaspian to processors/caspian/ucaspian.
+
+    ```bash
+    git clone git@code.ornl.gov:neurohw/ucaspian.git ./processors/caspian/ucaspian
+    ```
+
+4. First build the Verilator software simulation source.
+
+    ```bash
+    # In framework/processors/caspian/ucaspian
+    pushd processors/caspian/ucaspian
+    make test
+    popd
+    ```
+
+5. Build the framework environment with USB and Verilated uCaspian support.
+
+    ```bash
+    VCASPIAN=true USB=true bash scripts/create_env.sh
+    ```
+
+6. Source the framework environment
+
     ```bash
     source pyframework/bin/activate
     ```
 
-4. Clone µCaspian to processors/caspian.
-
-    ```bash
-    cd processors/caspian
-    git clone git@code.ornl.gov:neurohw/ucaspian.git 
-    ```
-
-6. Plug in the UPduino and use dmesg to find the ftdi_sio device id
+7. Plug in the UPduino and use dmesg to find the ftdi_sio device id
 
     ```bash
     $ dmesg
     ...
     [190067.797102] ftdi_sio 1-1.4:1.0: FTDI USB Serial Device converter detected
     ...
-    
+
     ```
     Update the `USB_DEV` variable in the makefile with the device ID for your board. This allows the script to automatically bind the USB device driver to the FPGA device without requiring the device cable to be disconnected and reconnected.
 
-7. Build and load ucaspian FPGA image.
+8. Build and load ucaspian FPGA image.
 
     ```bash
     # In framework/processors/caspian/ucaspian
     make flash
-    ```
-
-8. Build Verilator software simulation source.
-
-    ```bash
-    # In framework/processors/caspian/ucaspian
-    make test
     ```
 
 9. Run test python script to test connection to FPGA. You should see output data and see the LED on the FPGA blink.
@@ -115,7 +133,7 @@ Verible has useful system verilog linting and formating tools.
 
     pip install pyserial
 
-    python python/basic_test.py 
+    python scripts/basic_test.py
     ```
 
 10. Run caspian passthrough test. You should see output which matches `./bin/pass_bench sim 5 5 10`.
