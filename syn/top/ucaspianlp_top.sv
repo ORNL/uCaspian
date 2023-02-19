@@ -1,3 +1,5 @@
+// Brett Witherspoon <witherspoocb@ornl.gov>
+
 `default_nettype none
 
 module top #(
@@ -7,8 +9,12 @@ module top #(
 )(
   input  logic clk25,
   input  logic en,
+
   input  logic rxd,
   output logic txd,
+  input  logic ncts,
+  output logic nrts,
+
   output logic irq,
   output logic spi_cs,
   output logic [3:0] led,
@@ -113,7 +119,7 @@ module top #(
       .s_ready_o(wr_ready),
       .s_data_i (wr_data),
       .m_valid_o(tx_valid),
-      .m_ready_i(tx_ready),
+      .m_ready_i(~ncts & tx_ready),
       .m_data_o (tx_data)
     );
 
@@ -142,7 +148,7 @@ module top #(
     .rx_valid,
     .rx_data,
     .tx_data,
-    .tx_valid,
+    .tx_valid(~ncts & tx_valid),
     .tx_ready,
     .tx (txd)
   );
@@ -161,5 +167,7 @@ module top #(
     .led_2(),
     .led_3()
   );
+
+  assign nrts = ~rx_ready;
 
 endmodule
