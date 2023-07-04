@@ -2,14 +2,11 @@ name: ucaspian
 channels:
   - litex-hub
 dependencies:
-  - python=3.7
-  - litex-hub::yosys 
+  - litex-hub::yosys
   - litex-hub::icestorm
   - litex-hub::iceprog
   - litex-hub::nextpnr-ice40
-  - litex-hub::nextpnr-nexus
   - litex-hub::verilator
   - litex-hub::verible
   - pip
-  - pip:
-    - -r requirements.txt
+
