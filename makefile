@@ -67,7 +67,7 @@ else ifeq ($(BOARD),dev_r0)
 	PACKAGE = sg48
 	PCF = dev_r0.pcf
 	FREQ = 25
-else ifneq ($(BOARD),mimas)
+else
 	$(error Unsupported board)
 endif
 
@@ -79,14 +79,10 @@ VERILATOR_CPP = V$(VERILATOR_TOP).cpp
 YOSYS ?= yosys
 PNR ?= nextpnr-$(FAMILY)
 VERILATOR ?= verilator
-VIVADO ?= vivado
 
 # Select Icestorm programs
 ICEPACK ?= icepack
 ICEPROG ?= iceprog
-
-# For JTAG programming of Xilinx FPGAs
-XC3SPROG ?= xc3sprog
 
 # C++ (for Verilator)
 CXX ?= g++
@@ -98,7 +94,7 @@ VERILATOR_FLAGS = -Wno-fatal -O3
 # Waveform traces
 VERILATOR_FLAGS += --trace-fst
 
-TARGETS = $(filter-out mimas_top,$(basename $(notdir $(wildcard syn/top/*_top.sv))))
+TARGETS = $(basename $(notdir $(wildcard syn/top/*_top.sv)))
 
 .PHONY: help flash prog gui test lint clean $(TARGETS)
 
@@ -189,14 +185,6 @@ $(VERILATOR_OUT)/Vucaspian: $(UCASPIAN_RTL) $(SRC)/ucaspian.cpp
 	    --cc $(UCASPIAN_RTL) \
 	    --exe $(CPP_SOURCES)
 	$(MAKE) -C $(VERILATOR_OUT) -f V$(VERILATOR_TOP).mk V$(VERILATOR_TOP)
-
-$(BUILD)/mimas_ucaspian.bit:
-	$(VIVADO) -mode batch -nolog -nojournal -source syn/mimas.tcl
-
-mimas_bit: $(BUILD)/mimas_ucaspian.bit
-
-mimas_prog: $(BUILD)/mimas_ucaspian.bit
-	$(XC3SPROG) -c mimas_a7 $(BUILD)/mimas_ucaspian.bit
 
 # Have verilator lint the design
 lint:
