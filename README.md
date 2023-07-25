@@ -1,4 +1,6 @@
-# uCaspian
+# µCaspian
+
+**µCaspian code is confidential to ORNL. Do not share.**
 
 "micro-caspian" can be thought of as a neuromorphic equivalent of a microcontroller. This is a small design with a minimal feature set and limited performance designed for low cost, low power embedded applications. The target FPGA is the Lattice ice40UP5k.
 
