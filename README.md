@@ -38,7 +38,7 @@ You can either install the [OSS CAD Suite](https://github.com/YosysHQ/oss-cad-su
 As an alternative to the OSS CAD suite you can use the Conda EDA environment which includes Verible and many of the other open-source EDA tools used in the [ORNL NeuroHW](https://code.ornl.gov/neurohw) ecosystem.
 
 ```bash
-conda create -f environment.yml
+conda env create -f environment.yml
 conda activate ucaspian
 ```
 
@@ -119,11 +119,11 @@ You also need to be added to the `dialout` group.
     ```
     Update the `USB_DEV` variable in the makefile with the device ID for your board. This allows the script to automatically bind the USB device driver to the FPGA device without requiring the device cable to be disconnected and reconnected.
 
-8. Build and load ucaspian FPGA image.
+8. Build and load ucaspian FPGA image on the [UPduino](https://tinyvision.ai/products/upduino-v3-1) board.
 
     ```bash
     # In framework/processors/caspian/ucaspian
-    make flash
+    make upduino_uart_top.flash
     ```
 
 9. Run test python script to test connection to FPGA. You should see output data and see the LED on the FPGA blink.
