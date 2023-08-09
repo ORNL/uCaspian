@@ -119,6 +119,8 @@ You also need to be added to the `dialout` group.
     make upduino_uart_top.flash
     ```
 
+    For additional designs see `make help`. Not all designs currently meet timing and will fail during place and route. These designs should not be used.
+
 8. Run test python script to test connection to FPGA. You should see output data and see the LED on the FPGA blink.
 
     ```bash
