@@ -103,8 +103,14 @@ help:
 	@echo ================================================================
 	@echo " uCaspian"
 	@echo
+	@echo " Build:"
 	@for target in $(TARGETS); do \
-		echo " make $$target"; \
+		echo "  make $$target"; \
+	done
+	@echo
+	@echo " Flash:"
+	@for target in $(TARGETS); do \
+		echo "  make $$target.flash"; \
 	done
 	@echo ================================================================
 	@echo
@@ -112,12 +118,6 @@ help:
 $(TARGETS): %: $(BUILD)/%.bin
 
 all: $(TARGETS)
-
-flash: $(TOP).flash
-
-prog: $(TOP).prog
-
-gui: $(TOP).gui
 
 test: $(VERILATOR_OUT)/Vucaspian
 
