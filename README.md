@@ -69,10 +69,12 @@ You also need to be added to the `dialout` group.
 
     ```bash
     git clone git@code.ornl.gov:neuromorphic-computing/framework.git
+    cd framework
     ```
     or
     ```bash
     git clone git@bitbucket.org:neuromorphic-utk/framework.git
+    cd framework
     ```
 
 2. Clone Caspian to processors/caspian.
