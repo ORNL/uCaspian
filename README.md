@@ -89,28 +89,19 @@ You also need to be added to the `dialout` group.
     git clone git@code.ornl.gov:neurohw/ucaspian.git ./processors/caspian/ucaspian
     ```
 
-4. First build the Verilator software simulation source.
+4. Build the framework environment.
 
     ```bash
-    # In framework/processors/caspian/ucaspian
-    pushd processors/caspian/ucaspian
-    make test
-    popd
+    USB=true bash scripts/create_env.sh
     ```
 
-5. Build the framework environment with USB and Verilated uCaspian support.
-
-    ```bash
-    VCASPIAN=true USB=true bash scripts/create_env.sh
-    ```
-
-6. Source the framework environment
+5. Source the framework environment
 
     ```bash
     source pyframework/bin/activate
     ```
 
-7. Plug in the UPduino and use dmesg to find the ftdi_sio device id
+6. Plug in the UPduino and use dmesg to find the ftdi_sio device id
 
     ```bash
     $ dmesg
@@ -121,14 +112,14 @@ You also need to be added to the `dialout` group.
     ```
     Update the `USB_DEV` variable in the makefile with the device ID for your board. This allows the script to automatically bind the USB device driver to the FPGA device without requiring the device cable to be disconnected and reconnected.
 
-8. Build and load ucaspian FPGA image on the [UPduino](https://tinyvision.ai/products/upduino-v3-1) board.
+7. Build and load ucaspian FPGA image on the [UPduino](https://tinyvision.ai/products/upduino-v3-1) board.
 
     ```bash
     # In framework/processors/caspian/ucaspian
     make upduino_uart_top.flash
     ```
 
-9. Run test python script to test connection to FPGA. You should see output data and see the LED on the FPGA blink.
+8. Run test python script to test connection to FPGA. You should see output data and see the LED on the FPGA blink.
 
     ```bash
     # In framework/processors/caspian/ucaspian
@@ -138,7 +129,7 @@ You also need to be added to the `dialout` group.
     python scripts/basic_test.py
     ```
 
-10. Run caspian passthrough test. You should see output which matches `./bin/pass_bench sim 5 5 10`.
+9. Run caspian passthrough test. You should see output which matches `./bin/pass_bench sim 5 5 10`.
 
     ```bash
     cd ..
