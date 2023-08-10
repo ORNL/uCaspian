@@ -19,6 +19,23 @@ A summary of Development Versioning Specification is shown below.
 
 ## [Unreleased]
 
+### Changed
+- Restructured project to better support using uCaspian in an external project
+- Separated third party IP from ORNL uCaspian RTL
+- Updated and attempted to improve README
+
+### Added
+- Sphinx documentation generator
+- Basic SystemVerilog testbench
+- Conda environment
+- Low power uduinolp/ucaspianlp designs with clock gating
+- Wishbone interface wrapper and testbench
+- Lint waivers
+
+### Removed
+- Unused network files
+- Support for mimas board
+
 ## [1.0.0] - 2023-09-09
 
 Released an initial version of uCaspian from Parker Mitchell. This version has no breaking or major
