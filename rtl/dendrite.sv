@@ -7,11 +7,6 @@
  * At the start of every time step, the dendrite flushes
  * all accumulated charge to the neuron.
  */
-`ifndef uCaspian_Dendrite_SV
-`define uCaspian_Dendrite_SV
-
-`include "dp_ram.sv"
-`include "find_set_bit.sv"
 
 module ucaspian_dendrite(
     input               clk,
@@ -455,5 +450,3 @@ always_comb begin
 end
 
 endmodule
-
-`endif

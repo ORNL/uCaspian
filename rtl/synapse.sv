@@ -6,10 +6,6 @@
  * fires, it must look up the weight and target to pass those
  * values to the dendritic accumulator.
  */
-`ifndef uCaspian_Synapse_SV
-`define uCaspian_Synapse_SV
-
-`include "dp_ram.sv"
 
 module ucaspian_synapse(
     input               clk,
@@ -209,4 +205,3 @@ always_ff @(posedge clk) begin
 end
 
 endmodule
-`endif

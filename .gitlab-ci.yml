@@ -1,0 +1,36 @@
+stages:
+  - docs
+  - deploy_docs
+
+before_script:
+  - source /auto/ciscratch/conda/etc/profile.d/conda.sh
+  - conda create --force -y -p ./envs python==3.10.6 pip
+  - conda activate ./envs
+
+docs-job:
+  tags: [devdocs]
+  stage: docs
+  script:
+    - cd docs
+    - pip install -r requirements.txt
+    - make html
+  artifacts:
+    paths:
+      - docs/build/html
+
+.deploy_docs_common:
+  tags: [devdocs]
+  stage: deploy_docs
+  needs: [docs-job]
+  script:
+    - rsync -a --delete docs/build/html/ ~/www/neurohw/ucaspian
+
+deploy_docs-job:
+  extends: .deploy_docs_common
+  only:
+    refs:
+      - master
+
+deploy_docs_manual-job:
+  extends: .deploy_docs_common
+  when: manual

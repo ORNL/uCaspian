@@ -5,8 +5,6 @@
  * It is intended to hold accumulated charge but currently does
  * not have any specialized functionality beyond a simple DP RAM.
  */
-`ifndef uCaspian_DP_Ram_SV
-`define uCaspian_DP_Ram_SV
 
 module dp_ram_16x256(
     input               clk,
@@ -82,5 +80,3 @@ always_ff @(posedge clk) begin
 end
 
 endmodule
-
-`endif

@@ -1,0 +1,12 @@
+name: ucaspian
+channels:
+  - litex-hub
+dependencies:
+  - litex-hub::yosys
+  - litex-hub::icestorm
+  - litex-hub::iceprog
+  - litex-hub::nextpnr-ice40
+  - litex-hub::verilator
+  - litex-hub::verible
+  - pip
+

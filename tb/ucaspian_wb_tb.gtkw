@@ -1,0 +1,106 @@
+[*]
+[*] GTKWave Analyzer v3.3.111 (w)1999-2020 BSI
+[*] Tue Jan 10 10:29:24 2023
+[*]
+[dumpfile] "/home/spoonb/workspace/neurohw/ucaspian/tb/ucaspian_wb_tb.vcd"
+[dumpfile_mtime] "Tue Jan 10 10:16:08 2023"
+[dumpfile_size] 71811
+[savefile] "/home/spoonb/workspace/neurohw/ucaspian/tb/ucaspian_wb_tb.gtkw"
+[timestart] 0
+[size] 1920 1001
+[pos] -39 -39
+*-9.916635 1000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] ucaspian_wb_tb.
+[treeopen] ucaspian_wb_tb.dut.
+[sst_width] 273
+[signals_width] 118
+[sst_expanded] 1
+[sst_vpaned_height] 296
+@28
+ucaspian_wb_tb.clk_i
+ucaspian_wb_tb.rst_i
+@22
+ucaspian_wb_tb.adr_i[29:0]
+@c00023
+ucaspian_wb_tb.dat_i[31:0]
+@28
+(0)ucaspian_wb_tb.dat_i[31:0]
+(1)ucaspian_wb_tb.dat_i[31:0]
+(2)ucaspian_wb_tb.dat_i[31:0]
+(3)ucaspian_wb_tb.dat_i[31:0]
+(4)ucaspian_wb_tb.dat_i[31:0]
+(5)ucaspian_wb_tb.dat_i[31:0]
+(6)ucaspian_wb_tb.dat_i[31:0]
+(7)ucaspian_wb_tb.dat_i[31:0]
+(8)ucaspian_wb_tb.dat_i[31:0]
+(9)ucaspian_wb_tb.dat_i[31:0]
+(10)ucaspian_wb_tb.dat_i[31:0]
+(11)ucaspian_wb_tb.dat_i[31:0]
+(12)ucaspian_wb_tb.dat_i[31:0]
+(13)ucaspian_wb_tb.dat_i[31:0]
+(14)ucaspian_wb_tb.dat_i[31:0]
+(15)ucaspian_wb_tb.dat_i[31:0]
+(16)ucaspian_wb_tb.dat_i[31:0]
+(17)ucaspian_wb_tb.dat_i[31:0]
+(18)ucaspian_wb_tb.dat_i[31:0]
+(19)ucaspian_wb_tb.dat_i[31:0]
+(20)ucaspian_wb_tb.dat_i[31:0]
+(21)ucaspian_wb_tb.dat_i[31:0]
+(22)ucaspian_wb_tb.dat_i[31:0]
+(23)ucaspian_wb_tb.dat_i[31:0]
+(24)ucaspian_wb_tb.dat_i[31:0]
+(25)ucaspian_wb_tb.dat_i[31:0]
+(26)ucaspian_wb_tb.dat_i[31:0]
+(27)ucaspian_wb_tb.dat_i[31:0]
+(28)ucaspian_wb_tb.dat_i[31:0]
+(29)ucaspian_wb_tb.dat_i[31:0]
+(30)ucaspian_wb_tb.dat_i[31:0]
+(31)ucaspian_wb_tb.dat_i[31:0]
+@1401201
+-group_end
+@c00022
+ucaspian_wb_tb.dat_o[31:0]
+@28
+(0)ucaspian_wb_tb.dat_o[31:0]
+(1)ucaspian_wb_tb.dat_o[31:0]
+(2)ucaspian_wb_tb.dat_o[31:0]
+(3)ucaspian_wb_tb.dat_o[31:0]
+(4)ucaspian_wb_tb.dat_o[31:0]
+(5)ucaspian_wb_tb.dat_o[31:0]
+(6)ucaspian_wb_tb.dat_o[31:0]
+(7)ucaspian_wb_tb.dat_o[31:0]
+(8)ucaspian_wb_tb.dat_o[31:0]
+(9)ucaspian_wb_tb.dat_o[31:0]
+(10)ucaspian_wb_tb.dat_o[31:0]
+(11)ucaspian_wb_tb.dat_o[31:0]
+(12)ucaspian_wb_tb.dat_o[31:0]
+(13)ucaspian_wb_tb.dat_o[31:0]
+(14)ucaspian_wb_tb.dat_o[31:0]
+(15)ucaspian_wb_tb.dat_o[31:0]
+(16)ucaspian_wb_tb.dat_o[31:0]
+(17)ucaspian_wb_tb.dat_o[31:0]
+(18)ucaspian_wb_tb.dat_o[31:0]
+(19)ucaspian_wb_tb.dat_o[31:0]
+(20)ucaspian_wb_tb.dat_o[31:0]
+(21)ucaspian_wb_tb.dat_o[31:0]
+(22)ucaspian_wb_tb.dat_o[31:0]
+(23)ucaspian_wb_tb.dat_o[31:0]
+(24)ucaspian_wb_tb.dat_o[31:0]
+(25)ucaspian_wb_tb.dat_o[31:0]
+(26)ucaspian_wb_tb.dat_o[31:0]
+(27)ucaspian_wb_tb.dat_o[31:0]
+(28)ucaspian_wb_tb.dat_o[31:0]
+(29)ucaspian_wb_tb.dat_o[31:0]
+(30)ucaspian_wb_tb.dat_o[31:0]
+(31)ucaspian_wb_tb.dat_o[31:0]
+@1401200
+-group_end
+@28
+ucaspian_wb_tb.stb_i
+ucaspian_wb_tb.cyc_i
+ucaspian_wb_tb.dut.wr_fifo_u.s_ready_o
+ucaspian_wb_tb.we_i
+ucaspian_wb_tb.err_o
+ucaspian_wb_tb.ack_o
+[pattern_trace] 1
+[pattern_trace] 0

@@ -5,11 +5,6 @@
  * responsible for both handling the mapping of neurons to 
  * synapses and providing axonal delay.
  */
-`ifndef uCaspian_Axon_SV
-`define uCaspian_Axon_SV
-
-`include "dp_ram.sv"
-`include "find_set_bit.sv"
 
 module ucaspian_axon(
     input               clk,
@@ -484,4 +479,3 @@ always_ff @(posedge clk) begin
 end
 
 endmodule
-`endif

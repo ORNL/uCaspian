@@ -4,9 +4,6 @@
  * Muxes the incoming fires from synapses to a single dendrite unit.
  */
 
-`ifndef uCaspian_Dendrite_Mux_SV
-`define uCaspian_Dendrite_Mux_SV
-
 module dendrite_mux(
     input               clk,
     input               reset,
@@ -135,5 +132,3 @@ always_comb begin
 end
 
 endmodule
-
-`endif

@@ -1,0 +1,17 @@
+
+set_frequency clk_hf 24
+set_frequency clk_lf 0.01
+
+set_io -nowarn -pullup yes -pullup_resistor 100K spi_cs 16
+
+set_io -nowarn -pullup yes -pullup_resistor 100K en 2
+set_io -nowarn irq 45
+
+# GPIO UART
+set_io -nowarn txd 46
+set_io -nowarn rxd 47
+
+# USB UART
+#set_io -nowarn txd 14
+#set_io -nowarn rxd 15
+

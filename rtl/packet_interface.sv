@@ -5,8 +5,6 @@
  * variable length packet format. The packet interface also
  * incorporates some system-level state control.
  */
-`ifndef uCaspian_Packet_Interface_SV
-`define uCaspian_Packet_Interface_SV
 
 module packet_interface(
     input               clk,
@@ -559,4 +557,3 @@ end
 
 
 endmodule
-`endif

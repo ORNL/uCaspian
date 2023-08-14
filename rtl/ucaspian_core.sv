@@ -5,16 +5,6 @@
  * the acutal computation. It is designed to be paired with
  * an I/O interface and packet decoder to form a complete system.
  */
-`ifndef uCaspian_Core_SV
-`define uCaspian_Core_SV
-
-/* Include all of the Core Components */
-`include "synapse.sv"
-`include "dendrite_mux.sv"
-`include "dendrite.sv"
-`include "neuron.sv"
-`include "axon.sv"
-`include "fire_dispatch.sv"
 
 module ucaspian_core(
     input               clk,
@@ -582,4 +572,3 @@ always_ff @(posedge clk) begin
 end
 
 endmodule
-`endif

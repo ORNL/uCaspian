@@ -3,12 +3,8 @@
  *
  * A neuromorphic "microcontroller" design with TENNLab integration.
  */
-`ifndef uCaspian_SV
-`define uCaspian_SV
-/* verilator lint_off DECLFILENAME */
 
-`include "packet_interface.sv"
-`include "ucaspian_core.sv"
+/* verilator lint_off DECLFILENAME */
 
 module ucaspian(
     input               sys_clk,
@@ -112,7 +108,7 @@ packet_interface pck_ctrl_inst(
 ucaspian_core core(
     .clk(sys_clk),
     .reset(reset),
-    .enable(1),
+    .enable(1'b1),
 
     .core_active(core_active),
     .ack_sent(ack_sent),
@@ -158,4 +154,3 @@ ucaspian_core core(
 endmodule
 
 /* verilator lint_on DECLFILENAME */
-`endif
