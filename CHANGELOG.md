@@ -17,24 +17,24 @@ A summary of Development Versioning Specification is shown below.
 >
 > `main` always points to the current major branch plus 1. `dev` is an integration branch before merging into `main`. When `dev` is merged into `main`, the TAG is updated.
 
-## [Unreleased]
+## [2.0.0] - 2023-09-14
 
 ### Changed
-- Restructured project to better support using uCaspian in an external project
-- Separated third party IP from ORNL uCaspian RTL
-- Updated and attempted to improve README
+- Restructured project to better support using uCaspian in an external project.
+- Separated third party IP from ORNL uCaspian RTL.
+- Updated and attempted to improve README.
 
 ### Added
-- Sphinx documentation generator
-- Basic SystemVerilog testbench
-- Conda environment
-- Low power uduinolp/ucaspianlp designs with clock gating
-- Wishbone interface wrapper and testbench
-- Lint waivers
+- Sphinx documentation generator.
+- Basic SystemVerilog testbench.
+- Conda environment.
+- Low power uduinolp/ucaspianlp designs with clock gating.
+- Wishbone interface wrapper and testbench.
+- Lint waivers.
 
 ### Removed
-- Unused network files
-- Support for mimas board
+- Unused network files.
+- Support for mimas board.
 
 ## [1.0.0] - 2023-09-09
 
