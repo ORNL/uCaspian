@@ -150,3 +150,37 @@ spi.sv or spi_v4.sv should be used.
 - spi_v2.sv - Non-working, SPI clock synchronous implementation.
 - spi_v3.sv - Working 3-bit sync, with separate SPI communication and logic clocks.
 - spi_v4.sv - Working async FIFO for clock sync.
+
+## Citation
+
+
+If you use æCaspian, please cite the following paper:
+
+J. Parker Mitchell, Catherine D. Schuman, and Thomas E. Potok. 2020. A Small, Low Cost Event-Driven
+Architecture for Spiking Neural Networks on FPGAs. In International Conference on Neuromorphic
+Systems 2020 (ICONS 2020). Association for Computing Machinery, New York, NY, USA, Article 16, 1–4.
+https://doi.org/10.1145/3407197.3407216
+
+```bib
+@inproceedings{10.1145/3407197.3407216,
+    author = {Mitchell, J. Parker and Schuman, Catherine D. and Potok, Thomas E.},
+    title = {A Small, Low Cost Event-Driven Architecture for Spiking Neural Networks on FPGAs},
+    year = {2020},
+    isbn = {9781450388511},
+    publisher = {Association for Computing Machinery},
+    address = {New York, NY, USA},
+    url = {https://doi.org/10.1145/3407197.3407216},
+    doi = {10.1145/3407197.3407216},
+    abstract = {Currently, there is a lack of availability of low cost, low power neuromorphic hardware.
+    In this work, we introduce the μCaspian architecture along with an associated development PCB design
+    which provides a low cost and SWaP (size, weight, and power) optimized neuromorphic hardware
+    platform. Further, our proposed system only uses commercial off the shelf components and an open
+    source FPGA workflow to maximize the accessibility of μCaspian to all researchers.},
+    booktitle = {International Conference on Neuromorphic Systems 2020},
+    articleno = {16},
+    numpages = {4},
+    keywords = {spiking neural network, reconfigurable computing, neuromorphic, fpga},
+    location = {Oak Ridge, TN, USA},
+    series = {ICONS 2020}
+}
+```
