@@ -154,7 +154,7 @@ spi.sv or spi_v4.sv should be used.
 ## Citation
 
 
-If you use æCaspian, please cite the following paper:
+If you use uCaspian, please cite the following paper:
 
 J. Parker Mitchell, Catherine D. Schuman, and Thomas E. Potok. 2020. A Small, Low Cost Event-Driven
 Architecture for Spiking Neural Networks on FPGAs. In International Conference on Neuromorphic
