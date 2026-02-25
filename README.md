@@ -1,5 +1,7 @@
 # µCaspian
 
+[![DOI](https://zenodo.org/badge/1165143730.svg)](https://doi.org/10.5281/zenodo.18750589)
+
 "micro-caspian" can be thought of as a neuromorphic equivalent of a microcontroller. This is a small design with a minimal feature set and limited performance designed for low cost, low power embedded applications. The target FPGA is the Lattice ice40UP5k.
 
 A few details:
